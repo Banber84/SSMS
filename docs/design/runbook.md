@@ -14,10 +14,22 @@ go mod tidy
 go run ./server -addr :8080 -db server-storage.db
 ```
 
+如果需要从局域网其他电脑访问管理后台，监听地址应改为 `0.0.0.0:8080`：
+
+```bash
+go run ./server -addr 0.0.0.0:8080 -db server-storage.db
+```
+
 浏览器访问：
 
 ```text
 http://127.0.0.1:8080
+```
+
+局域网访问时，将地址替换为服务器 IP，例如第一版 demo 环境：
+
+```text
+http://192.168.1.187:8080
 ```
 
 后台页面：
@@ -34,6 +46,12 @@ http://127.0.0.1:8080
 
 ```bash
 go run ./agent -server http://127.0.0.1:8080 -name node01 -disk /
+```
+
+如果管理后台运行在局域网服务器上，将 `-server` 改为该服务器地址：
+
+```bash
+go run ./agent -server http://192.168.1.187:8080 -name node01 -disk /
 ```
 
 参数说明：

@@ -4,6 +4,13 @@
 
 本项目当前按 `ubuntu-26.04-live-server-amd64` 编写部署步骤。Ubuntu 可以安装在 Windows PC 的虚拟机、双系统或物理机环境中。
 
+第一版 demo 已验证的局域网测试环境：
+
+```text
+Management Server: 192.168.1.187
+访问地址:          http://192.168.1.187:8080
+```
+
 建议准备三台 Ubuntu Server 虚拟机或物理机：
 
 ```text
@@ -17,6 +24,133 @@ Node02:         192.168.56.12
 ```text
 docs/deployment/winpc-ubuntu26.md
 ```
+
+## 第一版 demo 测试流程
+
+第一版 demo 重点验证 Go 管理后台页面和 REST API 是否可用。管理后台运行在局域网服务器 `192.168.1.187`，页面访问地址为：
+
+```text
+http://192.168.1.187:8080
+```
+
+### 测试 1：页面访问
+
+在浏览器打开：
+
+```text
+http://192.168.1.187:8080
+```
+
+预期结果：
+
+- 管理后台首页可以正常打开。
+- 页面显示用户数、节点数、存储统计和最近日志区域。
+
+### 测试 2：用户管理
+
+打开：
+
+```text
+http://192.168.1.187:8080/users
+```
+
+创建测试用户：
+
+```text
+用户名: alice
+姓名: Alice
+邮箱: alice@example.com
+配额: 1073741824
+```
+
+预期结果：
+
+- 用户表格出现 `alice`。
+- 配额字段正常显示。
+- 页面提供配额修改和删除入口。
+
+### 测试 3：存储统计
+
+通过 API 写入测试数据：
+
+```bash
+curl -X POST http://192.168.1.187:8080/api/storage \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":1,"used_bytes":1048576,"path":"/srv/samba/users/alice"}'
+```
+
+打开：
+
+```text
+http://192.168.1.187:8080/storage
+```
+
+预期结果：
+
+- 页面显示用户 `alice`。
+- 已用空间显示为 `1048576`。
+- 剩余空间可以按配额自动计算。
+- 路径显示为 `/srv/samba/users/alice`。
+
+### 测试 4：节点状态
+
+通过 API 模拟节点上报：
+
+```bash
+curl -X POST http://192.168.1.187:8080/api/servers/report \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"node01","address":"192.168.1.187","cpu_usage":12.5,"memory_usage":40.2,"disk_usage":55.1}'
+```
+
+打开：
+
+```text
+http://192.168.1.187:8080/servers
+```
+
+预期结果：
+
+- 页面显示 `node01`。
+- 节点状态显示在线。
+- CPU、内存、磁盘使用率正常显示。
+
+### 测试 5：日志查看
+
+写入测试日志：
+
+```bash
+curl -X POST http://192.168.1.187:8080/api/logs \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"login","username":"alice","server_name":"node01","message":"user logged in"}'
+```
+
+打开：
+
+```text
+http://192.168.1.187:8080/logs
+```
+
+预期结果：
+
+- 日志页面显示 `login` 类型日志。
+- 用户显示为 `alice`。
+- 节点显示为 `node01`。
+- 日志内容显示为 `user logged in`。
+
+### 测试 6：首页汇总
+
+回到首页：
+
+```text
+http://192.168.1.187:8080
+```
+
+预期结果：
+
+- 用户数量更新。
+- 节点在线状态更新。
+- 存储用量汇总更新。
+- 最近日志显示刚写入的日志。
 
 ## 测试 1：用户隔离
 
