@@ -79,6 +79,15 @@ func (s *Store) GetUser(id int64) (models.User, error) {
 	return user, err
 }
 
+func (s *Store) GetUserByUsername(username string) (models.User, error) {
+	var user models.User
+	err := s.db.QueryRow(
+		`SELECT id, username, full_name, email, quota_bytes, created_at, updated_at FROM users WHERE username = ?`,
+		strings.TrimSpace(username),
+	).Scan(&user.ID, &user.Username, &user.FullName, &user.Email, &user.QuotaBytes, &user.CreatedAt, &user.UpdatedAt)
+	return user, err
+}
+
 func (s *Store) ListUsers() ([]models.User, error) {
 	rows, err := s.db.Query(`SELECT id, username, full_name, email, quota_bytes, created_at, updated_at FROM users ORDER BY username`)
 	if err != nil {
@@ -147,6 +156,14 @@ func (s *Store) UpdateQuota(id int64, quotaBytes int64) (models.User, error) {
 	return user, err
 }
 
+func (s *Store) UpdateQuotaByUsername(username string, quotaBytes int64) (models.User, error) {
+	user, err := s.GetUserByUsername(username)
+	if err != nil {
+		return models.User{}, err
+	}
+	return s.UpdateQuota(user.ID, quotaBytes)
+}
+
 func (s *Store) UpsertStorageUsage(req models.UpdateStorageUsageRequest) (models.StorageUsage, error) {
 	if req.UserID <= 0 {
 		return models.StorageUsage{}, errors.New("user_id is required")
@@ -172,6 +189,22 @@ func (s *Store) UpsertStorageUsage(req models.UpdateStorageUsageRequest) (models
 		return models.StorageUsage{}, err
 	}
 	return s.GetStorageUsage(req.UserID)
+}
+
+func (s *Store) UpsertStorageUsageByUsername(req models.UpdateStorageUsageByUsernameRequest) (models.StorageUsage, error) {
+	username := strings.TrimSpace(req.Username)
+	if username == "" {
+		return models.StorageUsage{}, errors.New("username is required")
+	}
+	user, err := s.GetUserByUsername(username)
+	if err != nil {
+		return models.StorageUsage{}, err
+	}
+	return s.UpsertStorageUsage(models.UpdateStorageUsageRequest{
+		UserID:    user.ID,
+		UsedBytes: req.UsedBytes,
+		Path:      req.Path,
+	})
 }
 
 func (s *Store) GetStorageUsage(userID int64) (models.StorageUsage, error) {

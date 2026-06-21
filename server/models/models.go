@@ -72,6 +72,12 @@ type UpdateStorageUsageRequest struct {
 	Path      string `json:"path"`
 }
 
+type UpdateStorageUsageByUsernameRequest struct {
+	Username  string `json:"username" binding:"required"`
+	UsedBytes int64  `json:"used_bytes" binding:"min=0"`
+	Path      string `json:"path"`
+}
+
 type ServerReportRequest struct {
 	Name        string  `json:"name" binding:"required"`
 	Address     string  `json:"address"`

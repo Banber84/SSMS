@@ -40,9 +40,10 @@ func NewRouter(store *service.Store) *gin.Engine {
 	group.GET("/users", handler.listUsers)
 	group.POST("/users", handler.createUser)
 	group.DELETE("/users/:id", handler.deleteUser)
-	group.PUT("/users/:id/quota", handler.updateQuota)
+	group.PUT("/users/:identifier/quota", handler.updateQuota)
 	group.GET("/storage", handler.listStorageUsage)
 	group.POST("/storage", handler.upsertStorageUsage)
+	group.POST("/storage/by-username", handler.upsertStorageUsageByUsername)
 	group.GET("/servers", handler.listServers)
 	group.POST("/servers/report", handler.reportServer)
 	group.GET("/logs", handler.listLogs)
@@ -136,16 +137,21 @@ func (h *Handler) deleteUserForm(ctx *gin.Context) {
 }
 
 func (h *Handler) updateQuota(ctx *gin.Context) {
-	id, ok := idParam(ctx)
-	if !ok {
-		return
-	}
 	var req models.UpdateQuotaRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	user, err := h.store.UpdateQuota(id, req.QuotaBytes)
+
+	identifier := ctx.Param("identifier")
+	id, err := strconv.ParseInt(identifier, 10, 64)
+	if err == nil && id > 0 {
+		user, err := h.store.UpdateQuota(id, req.QuotaBytes)
+		respond(ctx, user, err)
+		return
+	}
+
+	user, err := h.store.UpdateQuotaByUsername(identifier, req.QuotaBytes)
 	respond(ctx, user, err)
 }
 
@@ -178,6 +184,16 @@ func (h *Handler) upsertStorageUsage(ctx *gin.Context) {
 		return
 	}
 	usage, err := h.store.UpsertStorageUsage(req)
+	respond(ctx, usage, err)
+}
+
+func (h *Handler) upsertStorageUsageByUsername(ctx *gin.Context) {
+	var req models.UpdateStorageUsageByUsernameRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	usage, err := h.store.UpsertStorageUsageByUsername(req)
 	respond(ctx, usage, err)
 }
 

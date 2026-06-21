@@ -63,9 +63,21 @@ http://127.0.0.1:8080
 - `quota_bytes` 为用户配额，单位是字节。
 - 该接口只写入后台数据库，不直接创建 Linux 用户。
 
-### `PUT /api/users/{id}/quota`
+### `PUT /api/users/{id或username}/quota`
 
-修改用户配额。
+修改用户配额。路径参数既可以传后台数据库用户 ID，也可以直接传 Linux/Samba 用户名。
+
+按 ID 修改：
+
+```text
+PUT /api/users/1/quota
+```
+
+按用户名修改：
+
+```text
+PUT /api/users/alice/quota
+```
 
 请求示例：
 
@@ -76,6 +88,12 @@ http://127.0.0.1:8080
 ```
 
 响应为更新后的用户记录。
+
+说明：
+
+- 如果路径参数是正整数，后台按用户 ID 查询。
+- 如果路径参数不是正整数，后台按 `username` 查询。
+- 该接口方便 A 的配额脚本在执行成功后直接用用户名同步后台状态。
 
 ### `DELETE /api/users/{id}`
 
@@ -108,6 +126,27 @@ http://127.0.0.1:8080
 ```
 
 响应为更新后的存储统计记录。
+
+### `POST /api/storage/by-username`
+
+按用户名写入或更新用户存储使用量。该接口更适合和 A 的 `storage_usage_report.sh` 脚本对接，因为脚本输出通常包含用户名而不是后台数据库 ID。
+
+请求示例：
+
+```json
+{
+  "username": "alice",
+  "used_bytes": 123456,
+  "path": "/srv/samba/users/alice"
+}
+```
+
+响应为更新后的存储统计记录。
+
+说明：
+
+- `username` 必须已经存在于后台 `users` 表。
+- `used_bytes` 单位为字节。如果脚本输出 `used_kb`，调用该接口前需要转换为字节：`used_bytes = used_kb * 1024`。
 
 ## 节点状态
 

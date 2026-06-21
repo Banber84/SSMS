@@ -36,6 +36,14 @@ func TestStoreManagementFlow(t *testing.T) {
 		t.Fatalf("quota = %d, want 2048", user.QuotaBytes)
 	}
 
+	user, err = store.UpdateQuotaByUsername("alice", 4096)
+	if err != nil {
+		t.Fatalf("update quota by username: %v", err)
+	}
+	if user.QuotaBytes != 4096 {
+		t.Fatalf("quota = %d, want 4096", user.QuotaBytes)
+	}
+
 	usage, err := store.UpsertStorageUsage(models.UpdateStorageUsageRequest{
 		UserID:    user.ID,
 		UsedBytes: 512,
@@ -44,15 +52,27 @@ func TestStoreManagementFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("upsert storage usage: %v", err)
 	}
-	if usage.RemainingBytes != 1536 {
-		t.Fatalf("remaining = %d, want 1536", usage.RemainingBytes)
+	if usage.RemainingBytes != 3584 {
+		t.Fatalf("remaining = %d, want 3584", usage.RemainingBytes)
+	}
+
+	usage, err = store.UpsertStorageUsageByUsername(models.UpdateStorageUsageByUsernameRequest{
+		Username:  "alice",
+		UsedBytes: 1024,
+		Path:      "/srv/samba/users/alice",
+	})
+	if err != nil {
+		t.Fatalf("upsert storage usage by username: %v", err)
+	}
+	if usage.UserID != user.ID || usage.UsedBytes != 1024 || usage.RemainingBytes != 3072 {
+		t.Fatalf("unexpected username storage usage: %#v", usage)
 	}
 
 	items, err := store.ListStorageUsage()
 	if err != nil {
 		t.Fatalf("list storage usage: %v", err)
 	}
-	if len(items) != 1 || items[0].Username != "alice" || items[0].UsedBytes != 512 {
+	if len(items) != 1 || items[0].Username != "alice" || items[0].UsedBytes != 1024 {
 		t.Fatalf("unexpected storage usage: %#v", items)
 	}
 
@@ -86,7 +106,7 @@ func TestStoreManagementFlow(t *testing.T) {
 	if dashboard.UserCount != 1 || dashboard.ServerCount != 1 || dashboard.OnlineServers != 1 {
 		t.Fatalf("unexpected dashboard counts: %#v", dashboard)
 	}
-	if dashboard.TotalQuotaBytes != 2048 || dashboard.TotalUsedBytes != 512 {
+	if dashboard.TotalQuotaBytes != 4096 || dashboard.TotalUsedBytes != 1024 {
 		t.Fatalf("unexpected dashboard storage totals: %#v", dashboard)
 	}
 }

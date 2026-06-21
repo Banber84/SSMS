@@ -16,6 +16,14 @@ sudo scripts/create_user.sh alice --quota-gb 10
 sudo scripts/quota_manager.sh set alice 20
 ```
 
+同步到管理后台：
+
+```bash
+curl -X PUT http://192.168.1.187:8080/api/users/alice/quota \
+  -H 'Content-Type: application/json' \
+  -d '{"quota_bytes":21474836480}'
+```
+
 删除用户并保留数据：
 
 ```bash
@@ -44,7 +52,19 @@ JSON 示例：
 ]
 ```
 
-管理后台可以在 SQLite 中保存用户配额配置，再结合该脚本输出的 `used_kb` 计算剩余空间。
+管理后台可以在 SQLite 中保存用户配额配置，再结合该脚本输出的 `used_kb` 计算剩余空间。脚本对接时需要把 `used_kb` 转换为字节后上报：
+
+```bash
+curl -X POST http://192.168.1.187:8080/api/storage/by-username \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","used_bytes":1048576,"path":"/srv/samba/users/alice"}'
+```
+
+其中：
+
+```text
+used_bytes = used_kb * 1024
+```
 
 ## 节点约定
 
