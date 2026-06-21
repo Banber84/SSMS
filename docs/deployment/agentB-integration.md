@@ -69,3 +69,19 @@ used_bytes = used_kb * 1024
 ## 节点约定
 
 每台登录节点都需要创建与 Samba 用户同名的本地 Linux 用户，并保持登录密码与 Samba 密码一致。用户登录后的 CIFS 挂载由 `pam_mount` 完成，agentB 不需要直接处理挂载逻辑。
+
+如果需要同时在 Storage Server、NodeA、NodeB 创建同名用户，推荐在 Storage Server 上执行：
+
+```bash
+sudo scripts/sync_user.sh alice --quota-gb 1
+```
+
+该脚本会调用 A 部分的系统脚本完成三方用户同步。同步完成后，agentB 仍然只需要通过 REST API 写入用户记录、配额记录和存储统计，不需要直接执行 Linux/Samba 命令。
+
+如果创建入口在 NodeA 或 NodeB，可以执行：
+
+```bash
+scripts/request_user_sync.sh alice --quota-gb 1
+```
+
+该脚本会通过 SSH 请求 Storage Server 执行 `sync_user.sh`，最终仍由 Storage Server 统一同步三方用户状态。

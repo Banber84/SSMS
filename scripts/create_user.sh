@@ -10,12 +10,18 @@ fi
 usage() {
   cat <<'EOF'
 用法：
-  sudo scripts/create_user.sh USERNAME [--quota-gb GB]
+  sudo scripts/create_user.sh USERNAME [--quota-gb GB] [--password-stdin]
 
 创建 Linux 用户、Samba 账号、个人存储目录和用户配额。
 脚本会要求输入一次密码，并同时用于 Linux 账号和 Samba 账号。
+使用 --password-stdin 时，从标准输入读取一行密码，适合同步脚本调用。
 EOF
 }
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
 
 if [[ $EUID -ne 0 ]]; then
   echo "请使用 root 权限执行：sudo $0"
@@ -33,12 +39,17 @@ source "$CONFIG_FILE"
 USERNAME="$1"
 shift
 QUOTA_GB="${DEFAULT_QUOTA_GB:-10}"
+PASSWORD_STDIN="0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --quota-gb)
       QUOTA_GB="$2"
       shift 2
+      ;;
+    --password-stdin)
+      PASSWORD_STDIN="1"
+      shift
       ;;
     -h|--help)
       usage
@@ -81,14 +92,22 @@ else
   usermod --home "$USER_HOME" --shell /usr/sbin/nologin "$USERNAME"
 fi
 
-read -r -s -p "请输入 $USERNAME 的密码：" PASSWORD
-echo
-read -r -s -p "请再次输入密码：" PASSWORD_CONFIRM
-echo
+if [[ "$PASSWORD_STDIN" == "1" ]]; then
+  IFS= read -r PASSWORD
+  if [[ -z "$PASSWORD" ]]; then
+    echo "密码不能为空。"
+    exit 1
+  fi
+else
+  read -r -s -p "请输入 $USERNAME 的密码：" PASSWORD
+  echo
+  read -r -s -p "请再次输入密码：" PASSWORD_CONFIRM
+  echo
 
-if [[ "$PASSWORD" != "$PASSWORD_CONFIRM" ]]; then
-  echo "两次输入的密码不一致。"
-  exit 1
+  if [[ "$PASSWORD" != "$PASSWORD_CONFIRM" ]]; then
+    echo "两次输入的密码不一致。"
+    exit 1
+  fi
 fi
 
 printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd

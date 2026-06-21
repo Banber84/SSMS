@@ -23,6 +23,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y cifs-utils libpam-mount
 
 install -d -m 0755 /etc/ssms
 install -m 0644 "$CONFIG_FILE" /etc/ssms/system.conf
+if [[ -f "$PROJECT_ROOT/configs/sync.conf" ]]; then
+  install -m 0644 "$PROJECT_ROOT/configs/sync.conf" /etc/ssms/sync.conf
+fi
 
 if [[ -f /etc/security/pam_mount.conf.xml ]]; then
   cp /etc/security/pam_mount.conf.xml "/etc/security/pam_mount.conf.xml.bak.$(date +%Y%m%d%H%M%S)"
