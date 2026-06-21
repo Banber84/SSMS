@@ -312,3 +312,42 @@ sudo scripts/storage_usage_report.sh --format json
 ```text
 docs/deployment/storage-server-test-report.md
 ```
+
+## 三虚拟机完整联调实测记录
+
+测试环境：
+
+```text
+系统：Ubuntu 26.04 Server
+Storage Server：192.168.1.187
+NodeA：已部署
+NodeB：已部署
+测试范围：Samba 共享、Node 手动挂载、pam_mount 自动挂载、跨节点共享、用户隔离
+```
+
+实测结果：
+
+```text
+1. NodeA 手动挂载 //192.168.1.187/alice 成功。
+2. NodeB 手动挂载 //192.168.1.187/alice 成功。
+3. NodeB 可以看到 NodeA 创建的 manual-node01.txt。
+4. NodeB 可以创建 manual-nodeb.txt。
+5. alice 登录 NodeB 后，/home/alice/storage 自动挂载成功。
+6. NodeA 可以看到 NodeB 创建的文件。
+7. alice 在不同节点访问同一份共享数据。
+8. bob 登录后看不到 alice 的文件。
+9. Samba 用户隔离、Linux 权限隔离、pam_mount 自动挂载、跨节点共享访问均通过。
+```
+
+测试中遇到并确认的问题：
+
+```text
+1. NodeB 初次测试时缺少本地 alice 用户，执行 create_node_user.sh alice 后解决。
+2. nodeb1 查看 /mnt/ssms-alice 出现 Permission denied，这是 uid=alice、dir_mode=0700 的预期权限隔离结果，使用 sudo 或 sudo -u alice 查看正常。
+```
+
+完整联调报告见：
+
+```text
+docs/deployment/full-integration-test-report.md
+```

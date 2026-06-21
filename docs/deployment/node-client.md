@@ -71,8 +71,34 @@ configs/pam_mount.conf.xml
 sudo mkdir -p /mnt/ssms-alice
 sudo mount -t cifs //192.168.56.10/alice /mnt/ssms-alice \
   -o username=alice,vers=3.0,sec=ntlmssp,uid=$(id -u alice),gid=$(id -g alice),file_mode=0600,dir_mode=0700
-df -h /mnt/ssms-alice
+mount | grep /mnt/ssms-alice
+sudo -u alice ls -l /mnt/ssms-alice
 sudo umount /mnt/ssms-alice
+```
+
+如果当前登录用户不是 `alice`，直接执行 `ls -l /mnt/ssms-alice` 可能出现：
+
+```text
+Permission denied
+```
+
+这是正常现象。手动挂载参数中设置了 `uid=alice`、`gid=alice`、`dir_mode=0700`，表示只有 `alice` 或 `root` 可以查看该挂载目录。可以使用以下命令验证：
+
+```bash
+sudo ls -l /mnt/ssms-alice
+sudo -u alice ls -l /mnt/ssms-alice
+```
+
+如果出现以下错误：
+
+```text
+id: 'alice': no such user
+```
+
+说明当前登录节点还没有创建本地 `alice` 用户，需要先执行：
+
+```bash
+sudo scripts/create_node_user.sh alice
 ```
 
 ## 7. 登录挂载测试
