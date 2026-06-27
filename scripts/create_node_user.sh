@@ -4,11 +4,13 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 用法：
-  sudo scripts/create_node_user.sh USERNAME [--password-stdin]
+  sudo scripts/create_node_user.sh USERNAME [--password-stdin|--password-hash-stdin]
 
-在 NodeA/NodeB 上创建 Linux 登录用户。
+在登录节点上创建 Linux 登录用户。
 请使用与 Storage Server 上 Samba 用户一致的密码。
 使用 --password-stdin 时，从标准输入读取一行密码，适合同步脚本远程调用。
+使用 --password-hash-stdin 时，从标准输入读取 Linux shadow 密码哈希，
+适合 Storage Server 在接入新节点时安全补建现有用户。
 EOF
 }
 
@@ -30,11 +32,16 @@ fi
 USERNAME="$1"
 shift
 PASSWORD_STDIN="0"
+PASSWORD_HASH_STDIN="0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --password-stdin)
       PASSWORD_STDIN="1"
+      shift
+      ;;
+    --password-hash-stdin)
+      PASSWORD_HASH_STDIN="1"
       shift
       ;;
     -h|--help)
@@ -54,10 +61,21 @@ if [[ ! "$USERNAME" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
   exit 1
 fi
 
+if [[ "$PASSWORD_STDIN" == "1" && "$PASSWORD_HASH_STDIN" == "1" ]]; then
+  echo "--password-stdin 与 --password-hash-stdin 不能同时使用。"
+  exit 1
+fi
+
 if [[ "$PASSWORD_STDIN" == "1" ]]; then
   IFS= read -r PASSWORD
   if [[ -z "$PASSWORD" ]]; then
     echo "密码不能为空。"
+    exit 1
+  fi
+elif [[ "$PASSWORD_HASH_STDIN" == "1" ]]; then
+  IFS= read -r PASSWORD_HASH
+  if [[ ! "$PASSWORD_HASH" =~ ^\$[^:]+$ ]]; then
+    echo "密码哈希格式非法。"
     exit 1
   fi
 fi
@@ -67,6 +85,9 @@ if id "$USERNAME" >/dev/null 2>&1; then
   if [[ "$PASSWORD_STDIN" == "1" ]]; then
     printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd
     echo "用户已存在，已同步节点登录密码：$USERNAME"
+  elif [[ "$PASSWORD_HASH_STDIN" == "1" ]]; then
+    printf '%s:%s\n' "$USERNAME" "$PASSWORD_HASH" | chpasswd -e
+    echo "用户已存在，已同步节点登录密码哈希：$USERNAME"
   else
     echo "用户已存在：$USERNAME"
   fi
@@ -76,6 +97,9 @@ fi
 if [[ "$PASSWORD_STDIN" == "1" ]]; then
   useradd --create-home --user-group --shell /bin/bash "$USERNAME"
   printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd
+elif [[ "$PASSWORD_HASH_STDIN" == "1" ]]; then
+  useradd --create-home --user-group --shell /bin/bash "$USERNAME"
+  printf '%s:%s\n' "$USERNAME" "$PASSWORD_HASH" | chpasswd -e
 else
   adduser "$USERNAME"
 fi
