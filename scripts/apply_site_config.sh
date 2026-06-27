@@ -63,15 +63,33 @@ fi
 # shellcheck source=/dev/null
 source "$SITE_CONFIG"
 
-: "${SSMS_MANAGEMENT_HOST:?请在 site.env 中设置 SSMS_MANAGEMENT_HOST}"
+trim() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+is_blank() {
+  [[ -z "$(trim "${1:-}")" ]]
+}
+
+require_value() {
+  local name="$1"
+  local value="${2:-}"
+  if is_blank "$value"; then
+    echo "site.env 缺少必填项：$name" >&2
+    return 1
+  fi
+}
 
 SSMS_MANAGEMENT_PORT="${SSMS_MANAGEMENT_PORT:-8080}"
-SSMS_MANAGEMENT_URL="${SSMS_MANAGEMENT_URL:-http://${SSMS_MANAGEMENT_HOST}:${SSMS_MANAGEMENT_PORT}}"
+SSMS_MANAGEMENT_URL="${SSMS_MANAGEMENT_URL:-}"
 SSMS_SERVER_ADDR="${SSMS_SERVER_ADDR:-0.0.0.0:${SSMS_MANAGEMENT_PORT}}"
 SSMS_DB_PATH="${SSMS_DB_PATH:-/var/lib/ssms/server-storage.db}"
 GIN_MODE="${GIN_MODE:-release}"
 
-STORAGE_SERVER="${STORAGE_SERVER:-$SSMS_MANAGEMENT_HOST}"
+STORAGE_SERVER="${STORAGE_SERVER:-}"
 STORAGE_ROOT="${STORAGE_ROOT:-/srv/samba/users}"
 STORAGE_GROUP="${STORAGE_GROUP:-storageusers}"
 DEFAULT_QUOTA_GB="${DEFAULT_QUOTA_GB:-10}"
@@ -79,16 +97,58 @@ MOUNT_POINT_NAME="${MOUNT_POINT_NAME:-storage}"
 SMB_WORKGROUP="${SMB_WORKGROUP:-WORKGROUP}"
 SMB_NETBIOS_NAME="${SMB_NETBIOS_NAME:-SSMS-STORAGE}"
 
-STORAGE_SYNC_HOST="${STORAGE_SYNC_HOST:-$STORAGE_SERVER}"
+STORAGE_SYNC_HOST="${STORAGE_SYNC_HOST:-}"
 STORAGE_SYNC_USER="${STORAGE_SYNC_USER:-}"
 STORAGE_SYNC_PROJECT_DIR="${STORAGE_SYNC_PROJECT_DIR:-}"
 DEFAULT_SYNC_QUOTA_GB="${DEFAULT_SYNC_QUOTA_GB:-1}"
 
-SSMS_AGENT_NAME="${SSMS_AGENT_NAME:-NodeA}"
+SSMS_AGENT_NAME="${SSMS_AGENT_NAME:-}"
 SSMS_AGENT_ADDRESS="${SSMS_AGENT_ADDRESS:-}"
 SSMS_AGENT_DISK="${SSMS_AGENT_DISK:-/}"
 SSMS_AGENT_INTERVAL="${SSMS_AGENT_INTERVAL:-30s}"
-SSMS_SERVER_URL="${SSMS_SERVER_URL:-$SSMS_MANAGEMENT_URL}"
+SSMS_SERVER_URL="${SSMS_SERVER_URL:-}"
+
+validation_failed=0
+require_value SSMS_MANAGEMENT_HOST "${SSMS_MANAGEMENT_HOST:-}" || validation_failed=1
+require_value STORAGE_SERVER "$STORAGE_SERVER" || validation_failed=1
+require_value STORAGE_SYNC_HOST "$STORAGE_SYNC_HOST" || validation_failed=1
+require_value STORAGE_SYNC_USER "$STORAGE_SYNC_USER" || validation_failed=1
+require_value STORAGE_SYNC_PROJECT_DIR "$STORAGE_SYNC_PROJECT_DIR" || validation_failed=1
+require_value SSMS_AGENT_NAME "$SSMS_AGENT_NAME" || validation_failed=1
+require_value SSMS_AGENT_ADDRESS "$SSMS_AGENT_ADDRESS" || validation_failed=1
+require_value SSMS_NODES "${SSMS_NODES:-}" || validation_failed=1
+
+if is_blank "$SSMS_MANAGEMENT_URL"; then
+  SSMS_MANAGEMENT_URL="http://${SSMS_MANAGEMENT_HOST}:${SSMS_MANAGEMENT_PORT}"
+fi
+if is_blank "$SSMS_SERVER_URL"; then
+  SSMS_SERVER_URL="$SSMS_MANAGEMENT_URL"
+fi
+
+node_line_count=0
+if [[ -n "${SSMS_NODES:-}" ]]; then
+  while IFS= read -r line; do
+    line="$(trim "$line")"
+    [[ -z "$line" ]] && continue
+    read -r node_name node_host node_user node_project extra <<< "$line"
+    if [[ -z "${node_name:-}" || -z "${node_host:-}" || -z "${node_user:-}" || -z "${node_project:-}" || -n "${extra:-}" ]]; then
+      echo "site.env 中 SSMS_NODES 格式错误：$line" >&2
+      echo "正确格式：节点名 主机地址 SSH用户 项目目录" >&2
+      validation_failed=1
+    fi
+    node_line_count=$((node_line_count + 1))
+  done <<< "$SSMS_NODES"
+fi
+
+if [[ "$node_line_count" -eq 0 ]]; then
+  echo "site.env 缺少有效节点清单：SSMS_NODES" >&2
+  validation_failed=1
+fi
+
+if [[ "$validation_failed" -ne 0 ]]; then
+  echo "请先复制 configs/site.env.example 为 configs/site.env，并填写真实部署信息后再生成配置。" >&2
+  exit 1
+fi
 
 write_kv() {
   printf '%s=%q\n' "$1" "$2"

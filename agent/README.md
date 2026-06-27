@@ -105,7 +105,9 @@ cp configs/site.env.example configs/site.env
 vim configs/site.env
 ```
 
-每台节点部署前，在 `configs/site.env` 中把 `SSMS_AGENT_NAME` 和 `SSMS_AGENT_ADDRESS` 改成当前节点值。生成后的环境变量示例：
+每台节点部署前，在 `configs/site.env` 中把 `SSMS_AGENT_NAME` 和 `SSMS_AGENT_ADDRESS` 改成当前节点值。`SSMS_SERVER_URL`、`SSMS_AGENT_NAME`、`SSMS_AGENT_ADDRESS` 不能为空，否则 systemd 会拒绝启动 Agent。
+
+生成后的环境变量示例：
 
 ```text
 SSMS_SERVER_URL=http://192.168.1.187:8080

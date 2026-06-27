@@ -99,6 +99,8 @@ cp configs/site.env.example configs/site.env
 vim configs/site.env
 ```
 
+`configs/site.env.example` 中和机器身份相关的字段默认留空。生成配置前必须填写真实值，否则 `apply_site_config.sh` 会报错并停止。
+
 常用字段：
 
 ```text
@@ -138,11 +140,7 @@ storage-agent.env
 管理后台运行时需要读取 `server/templates/*.html`，建议把项目发布目录放到 `/opt/ssms`：
 
 ```bash
-sudo mkdir -p /opt/ssms /etc/ssms
-sudo cp -r server docs configs README.md LICENSE /opt/ssms/
-sudo install -m 0755 bin/storage-server /usr/local/bin/storage-server
-sudo scripts/apply_site_config.sh --config configs/site.env --output-dir /etc/ssms
-sudo install -m 0644 configs/storage-server.service /etc/systemd/system/storage-server.service
+sudo scripts/install_management_server.sh
 ```
 
 如果还没有准备统一部署配置，先执行：
@@ -160,6 +158,8 @@ SSMS_DB_PATH=/var/lib/ssms/server-storage.db
 GIN_MODE=release
 ```
 
+安装脚本会自动创建 `/opt/ssms` 和 `/etc/ssms`，并复制 Web 模板、文档、配置和脚本。不要只安装 `/usr/local/bin/storage-server`，否则 systemd 启动时会因为 `WorkingDirectory=/opt/ssms` 不存在或缺少 `server/templates` 而失败。
+
 启动服务：
 
 ```bash
@@ -172,6 +172,18 @@ sudo systemctl status storage-server
 
 ```bash
 journalctl -u storage-server -f
+```
+
+测试后如需删除管理后台并重新部署：
+
+```bash
+sudo scripts/uninstall_management_server.sh
+```
+
+默认会删除 `storage-server.service`、`/usr/local/bin/storage-server` 和 `/opt/ssms`，但保留 SQLite 数据库、日志和 `/etc/ssms/storage-server.env`。如果要彻底清理测试数据：
+
+```bash
+sudo scripts/uninstall_management_server.sh --purge-all
 ```
 
 分发 Agent 到节点示例：
@@ -198,7 +210,7 @@ sudo scripts/apply_site_config.sh --config configs/site.env --output-dir /etc/ss
 sudo install -m 0644 configs/storage-agent.service /etc/systemd/system/storage-agent.service
 ```
 
-每台节点部署前，在 `configs/site.env` 中把 `SSMS_AGENT_NAME` 和 `SSMS_AGENT_ADDRESS` 改成当前节点值。
+每台节点部署前，在 `configs/site.env` 中把 `SSMS_AGENT_NAME` 和 `SSMS_AGENT_ADDRESS` 改成当前节点值。`SSMS_SERVER_URL`、`SSMS_AGENT_NAME`、`SSMS_AGENT_ADDRESS` 不能为空，否则 systemd 会拒绝启动 Agent。
 
 生成后的 Agent 环境变量示例：
 

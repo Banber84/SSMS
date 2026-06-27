@@ -7,11 +7,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 EnvironmentFile=-/etc/ssms/storage-agent.env
-Environment=SSMS_SERVER_URL=http://127.0.0.1:8080
-Environment=SSMS_AGENT_NAME=NodeA
-Environment=SSMS_AGENT_ADDRESS=127.0.0.1
 Environment=SSMS_AGENT_DISK=/
 Environment=SSMS_AGENT_INTERVAL=30s
+ExecStartPre=/bin/sh -c 'test -n "$SSMS_SERVER_URL" && test -n "$SSMS_AGENT_NAME" && test -n "$SSMS_AGENT_ADDRESS"'
 ExecStart=/usr/local/bin/storage-agent -server ${SSMS_SERVER_URL} -name ${SSMS_AGENT_NAME} -address ${SSMS_AGENT_ADDRESS} -disk ${SSMS_AGENT_DISK} -interval ${SSMS_AGENT_INTERVAL}
 Restart=always
 RestartSec=5

@@ -158,6 +158,7 @@ ServerStorageManagementSystem/
 │   ├── delete_node_user.sh
 │   ├── delete_user.sh
 │   ├── apply_site_config.sh
+│   ├── install_management_server.sh
 │   ├── install_node_client.sh
 │   ├── install_storage_server.sh
 │   ├── quota_manager.sh
@@ -166,7 +167,8 @@ ServerStorageManagementSystem/
 │   ├── storage_usage_report.sh
 │   ├── sync_delete_user.sh
 │   ├── sync_user.sh
-│   └── test_mount.sh
+│   ├── test_mount.sh
+│   └── uninstall_management_server.sh
 ├── configs/
 │   ├── nodes.conf
 │   ├── pam_mount.conf.xml
