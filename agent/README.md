@@ -26,7 +26,7 @@ Agent 节点
 ```bash
 go run ./agent \
   -server http://192.168.1.187:8080 \
-  -name node01 \
+  -name NodeA \
   -address 192.168.1.188 \
   -disk / \
   -once
@@ -35,7 +35,7 @@ go run ./agent \
 参数说明：
 
 - `-server`：管理后台地址。
-- `-name`：当前节点名称，例如 `storage-server`、`node01`、`node02`。
+- `-name`：当前节点名称，例如 `storage-server`、`NodeA`、`NodeB`。
 - `-address`：当前节点 IP。
 - `-disk`：要统计的磁盘路径，默认 `/`。
 - `-interval`：持续运行时的上报间隔，默认 `30s`。
@@ -65,7 +65,7 @@ ssh user@192.168.1.188 'sudo install -m 0755 /tmp/storage-agent /usr/local/bin/s
 ```bash
 /usr/local/bin/storage-agent \
   -server http://192.168.1.187:8080 \
-  -name node01 \
+  -name NodeA \
   -address 192.168.1.188 \
   -disk /
 ```
@@ -75,7 +75,7 @@ ssh user@192.168.1.188 'sudo install -m 0755 /tmp/storage-agent /usr/local/bin/s
 ```bash
 /usr/local/bin/storage-agent \
   -server http://192.168.1.187:8080 \
-  -name node01 \
+  -name NodeA \
   -address 192.168.1.188 \
   -disk / \
   -once
@@ -94,21 +94,22 @@ configs/storage-agent.service
 ```bash
 sudo mkdir -p /etc/ssms
 sudo install -m 0755 bin/storage-agent /usr/local/bin/storage-agent
-sudo install -m 0644 configs/storage-agent.env.example /etc/ssms/storage-agent.env
+sudo scripts/apply_site_config.sh --config configs/site.env --output-dir /etc/ssms
 sudo install -m 0644 configs/storage-agent.service /etc/systemd/system/storage-agent.service
 ```
 
-根据节点实际情况修改环境变量：
+如果还没有准备统一部署配置，先执行：
 
 ```bash
-sudo vim /etc/ssms/storage-agent.env
+cp configs/site.env.example configs/site.env
+vim configs/site.env
 ```
 
-示例：
+每台节点部署前，在 `configs/site.env` 中把 `SSMS_AGENT_NAME` 和 `SSMS_AGENT_ADDRESS` 改成当前节点值。生成后的环境变量示例：
 
 ```text
 SSMS_SERVER_URL=http://192.168.1.187:8080
-SSMS_AGENT_NAME=node01
+SSMS_AGENT_NAME=NodeA
 SSMS_AGENT_ADDRESS=192.168.1.188
 SSMS_AGENT_DISK=/
 SSMS_AGENT_INTERVAL=30s

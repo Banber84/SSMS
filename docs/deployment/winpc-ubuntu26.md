@@ -1,6 +1,6 @@
 # WinPC 安装 Ubuntu 26.04 Server 说明
 
-本项目实际部署环境为 Windows PC 上安装 `ubuntu-26.04-live-server-amd64`。可以采用物理机直接安装、双系统安装，或在 Windows 上使用虚拟机安装。为了让 Storage Server、Node01、Node02 能互相访问，重点是网络地址固定、磁盘分区明确、SSH 可用。
+本项目实际部署环境为 Windows PC 上安装 `ubuntu-26.04-live-server-amd64`。可以采用物理机直接安装、双系统安装，或在 Windows 上使用虚拟机安装。为了让 Storage Server、NodeA、NodeB 能互相访问，重点是网络地址固定、磁盘分区明确、SSH 可用。
 
 ## 1. 安装介质
 
@@ -18,8 +18,8 @@ ubuntu-26.04-live-server-amd64.iso
 
 ```text
 Storage Server: 192.168.56.10
-Node01:         192.168.56.11
-Node02:         192.168.56.12
+NodeA:         192.168.56.11
+NodeB:         192.168.56.12
 ```
 
 如果只有一台 WinPC，可以在虚拟机中创建三台 Ubuntu Server。虚拟机网络建议使用同一个 Host-only 或桥接网络，确保三台 Ubuntu 可以互相 `ping` 通。
@@ -82,7 +82,7 @@ ip addr
 ping -c 3 192.168.56.11
 ```
 
-Node01 和 Node02 只需要把 `addresses` 分别改成 `192.168.56.11/24`、`192.168.56.12/24`。
+NodeA 和 NodeB 只需要把 `addresses` 分别改成 `192.168.56.11/24`、`192.168.56.12/24`。
 
 ## 5. 基础检查
 
@@ -101,7 +101,7 @@ sudo systemctl status ssh
 Ubuntu 26.04
 x86_64
 SSH 服务 active
-Storage Server、Node01、Node02 可以互相 ping 通
+Storage Server、NodeA、NodeB 可以互相 ping 通
 ```
 
 ## 6. 从 WinPC 连接 Ubuntu
@@ -136,7 +136,7 @@ sudo ufw disable
 
 ```text
 1. 在 Storage Server 上部署 Samba、用户目录和 quota。
-2. 在 Node01、Node02 上部署 cifs-utils 和 pam_mount。
+2. 在 NodeA、NodeB 上部署 cifs-utils 和 pam_mount。
 3. 创建测试用户 alice、bob。
 4. 测试用户隔离、跨节点访问、自动挂载和配额限制。
 ```

@@ -50,7 +50,7 @@ http://192.168.1.187:8080
 | TC-01 | 首页访问 | 浏览器访问 `/` | 首页正常打开，显示统计区域 | 页面可正常访问 | 通过 |
 | TC-02 | 用户管理 | 在 `/users` 创建 `alice` | 用户表格显示 `alice` 和配额 | 用户信息正常显示 | 通过 |
 | TC-03 | 存储统计 | 调用 `POST /api/storage` 写入用量 | `/storage` 显示已用和剩余空间 | 存储统计正常显示 | 通过 |
-| TC-04 | 节点状态 | 调用 `POST /api/servers/report` 上报节点 | `/servers` 显示 `node01` 在线 | 节点状态正常显示 | 通过 |
+| TC-04 | 节点状态 | 调用 `POST /api/servers/report` 上报节点 | `/servers` 显示 `NodeA` 在线 | 节点状态正常显示 | 通过 |
 | TC-05 | 日志管理 | 调用 `POST /api/logs` 写入登录日志 | `/logs` 显示日志记录 | 日志正常显示 | 通过 |
 | TC-06 | 首页汇总 | 写入用户、存储、节点、日志后刷新首页 | 首页汇总数据更新 | 首页汇总正常 | 通过 |
 
@@ -156,7 +156,7 @@ curl -X POST http://192.168.1.187:8080/api/storage \
 ```bash
 curl -X POST http://192.168.1.187:8080/api/servers/report \
   -H 'Content-Type: application/json' \
-  -d '{"name":"node01","address":"192.168.1.187","cpu_usage":12.5,"memory_usage":40.2,"disk_usage":55.1}'
+  -d '{"name":"NodeA","address":"192.168.1.187","cpu_usage":12.5,"memory_usage":40.2,"disk_usage":55.1}'
 ```
 
 写入日志：
@@ -164,7 +164,7 @@ curl -X POST http://192.168.1.187:8080/api/servers/report \
 ```bash
 curl -X POST http://192.168.1.187:8080/api/logs \
   -H 'Content-Type: application/json' \
-  -d '{"type":"login","username":"alice","server_name":"node01","message":"user logged in"}'
+  -d '{"type":"login","username":"alice","server_name":"NodeA","message":"user logged in"}'
 ```
 
 ## 测试结论

@@ -114,8 +114,8 @@ vim configs/nodes.conf
 示例：
 
 ```text
-nodeA 192.168.1.188 nodea1 /home/nodea1/ServerStorageManagementSystem
-nodeB 192.168.1.189 nodeb1 /home/nodeb1/ServerStorageManagementSystem
+NodeA 192.168.1.188 nodea1 /home/nodea1/ServerStorageManagementSystem
+NodeB 192.168.1.189 nodeb1 /home/nodeb1/ServerStorageManagementSystem
 ```
 
 ## 同步创建用户
@@ -137,19 +137,21 @@ sudo scripts/sync_user.sh alice --quota-gb 1
 
 ## 从 NodeA/NodeB 发起同步
 
-先在节点上配置 Storage Server 连接信息：
+先在节点上通过统一部署模板生成 Storage Server 连接配置：
 
 ```bash
-vim configs/sync.conf
+cp configs/site.env.example configs/site.env
+vim configs/site.env
+scripts/apply_site_config.sh --config configs/site.env --output-dir configs
 ```
 
-示例：
+需要关注的字段：
 
 ```text
-STORAGE_SYNC_HOST="192.168.1.187"
-STORAGE_SYNC_USER="a2"
-STORAGE_SYNC_PROJECT_DIR="/home/a2/ServerStorageManagementSystem"
-DEFAULT_SYNC_QUOTA_GB="1"
+STORAGE_SYNC_HOST
+STORAGE_SYNC_USER
+STORAGE_SYNC_PROJECT_DIR
+DEFAULT_SYNC_QUOTA_GB
 ```
 
 在 NodeA 或 NodeB 上执行：
@@ -163,7 +165,7 @@ scripts/request_user_sync.sh alice --quota-gb 1
 执行流程：
 
 ```text
-1. 当前节点读取 configs/sync.conf。
+1. 当前节点读取 `configs/sync.conf` 或 `/etc/ssms/sync.conf`。
 2. 当前节点通过 SSH 登录 Storage Server。
 3. Storage Server 执行 sudo scripts/sync_user.sh alice --quota-gb 1 --password-stdin。
 4. Storage Server 创建/更新本机 Samba 用户。

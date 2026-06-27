@@ -192,7 +192,7 @@ PUT /api/users/username/alice/quota
 
 ```json
 {
-  "name": "node01",
+  "name": "NodeA",
   "address": "192.168.1.21",
   "cpu_usage": 12.5,
   "memory_usage": 45.2,
@@ -224,7 +224,7 @@ PUT /api/users/username/alice/quota
 {
   "type": "login",
   "username": "alice",
-  "server_name": "node01",
+  "server_name": "NodeA",
   "message": "user logged in"
 }
 ```

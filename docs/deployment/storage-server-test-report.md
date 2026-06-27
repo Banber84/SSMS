@@ -12,7 +12,7 @@
 测试范围：Storage Server 单机测试
 ```
 
-本次测试只覆盖成员 A 负责的 Storage Server 部署、Samba 共享、Linux 权限、quota 配额和使用量统计。Node01、Node02 尚未安装，因此自动挂载和跨节点访问暂未测试。
+本次测试只覆盖成员 A 负责的 Storage Server 部署、Samba 共享、Linux 权限、quota 配额和使用量统计。NodeA、NodeB 尚未安装，因此自动挂载和跨节点访问暂未测试。
 
 ## 测试步骤与结果
 
@@ -204,7 +204,7 @@ Storage Server 单机测试通过，已验证：
 7. 用户 quota 限制正常。
 ```
 
-待后续 Node01、Node02 部署后继续测试：
+待后续 NodeA、NodeB 部署后继续测试：
 
 ```text
 1. 登录节点自动挂载。

@@ -45,13 +45,13 @@ http://192.168.1.187:8080
 在需要上报状态的节点上执行：
 
 ```bash
-go run ./agent -server http://127.0.0.1:8080 -name node01 -disk /
+go run ./agent -server http://127.0.0.1:8080 -name NodeA -disk /
 ```
 
 如果管理后台运行在局域网服务器上，将 `-server` 改为该服务器地址：
 
 ```bash
-go run ./agent -server http://192.168.1.187:8080 -name node01 -disk /
+go run ./agent -server http://192.168.1.187:8080 -name NodeA -disk /
 ```
 
 参数说明：
@@ -76,7 +76,7 @@ curl -X DELETE http://127.0.0.1:8080/api/servers/1
 只上报一次：
 
 ```bash
-go run ./agent -server http://127.0.0.1:8080 -name node01 -disk / -once
+go run ./agent -server http://127.0.0.1:8080 -name NodeA -disk / -once
 ```
 
 注意：`agent/` 不是独立 Go module，`go.mod` 位于仓库根目录。开发测试时应在项目根目录执行 `go run ./agent`。部署到其他节点时，建议先在根目录编译二进制，再分发 `bin/storage-agent`。
@@ -88,6 +88,51 @@ go build -o bin/storage-server ./server
 go build -o bin/storage-agent ./agent
 ```
 
+## 统一部署配置
+
+迁移服务器 IP、端口、节点清单时，优先修改统一模板，不要分别手改多个配置文件。
+
+首次准备：
+
+```bash
+cp configs/site.env.example configs/site.env
+vim configs/site.env
+```
+
+常用字段：
+
+```text
+SSMS_MANAGEMENT_HOST      管理后台 IP 或域名
+SSMS_MANAGEMENT_PORT      管理后台端口
+STORAGE_SERVER            Samba/Storage Server IP
+STORAGE_SYNC_HOST         登录节点请求用户同步时连接的 Storage Server
+SSMS_AGENT_NAME           当前机器上报到后台的节点名称
+SSMS_AGENT_ADDRESS        当前机器上报到后台的节点 IP
+SSMS_NODES                Storage Server 批量同步用户时使用的登录节点清单
+```
+
+在仓库内生成脚本使用的配置文件：
+
+```bash
+scripts/apply_site_config.sh --config configs/site.env --output-dir configs
+```
+
+在部署机器上直接生成 systemd 和脚本读取的配置文件：
+
+```bash
+sudo scripts/apply_site_config.sh --config configs/site.env --output-dir /etc/ssms
+```
+
+该命令会生成：
+
+```text
+system.conf
+sync.conf
+nodes.conf
+storage-server.env
+storage-agent.env
+```
+
 ## systemd 部署管理后台
 
 管理后台运行时需要读取 `server/templates/*.html`，建议把项目发布目录放到 `/opt/ssms`：
@@ -96,17 +141,18 @@ go build -o bin/storage-agent ./agent
 sudo mkdir -p /opt/ssms /etc/ssms
 sudo cp -r server docs configs README.md LICENSE /opt/ssms/
 sudo install -m 0755 bin/storage-server /usr/local/bin/storage-server
-sudo install -m 0644 configs/storage-server.env.example /etc/ssms/storage-server.env
+sudo scripts/apply_site_config.sh --config configs/site.env --output-dir /etc/ssms
 sudo install -m 0644 configs/storage-server.service /etc/systemd/system/storage-server.service
 ```
 
-根据实际环境修改：
+如果还没有准备统一部署配置，先执行：
 
 ```bash
-sudo vim /etc/ssms/storage-server.env
+cp configs/site.env.example configs/site.env
+vim configs/site.env
 ```
 
-示例：
+生成后的管理后台环境变量示例：
 
 ```text
 SSMS_SERVER_ADDR=0.0.0.0:8080
@@ -148,21 +194,17 @@ configs/storage-agent.service
 ```bash
 sudo mkdir -p /etc/ssms
 sudo install -m 0755 bin/storage-agent /usr/local/bin/storage-agent
-sudo install -m 0644 configs/storage-agent.env.example /etc/ssms/storage-agent.env
+sudo scripts/apply_site_config.sh --config configs/site.env --output-dir /etc/ssms
 sudo install -m 0644 configs/storage-agent.service /etc/systemd/system/storage-agent.service
 ```
 
-根据当前节点修改：
+每台节点部署前，在 `configs/site.env` 中把 `SSMS_AGENT_NAME` 和 `SSMS_AGENT_ADDRESS` 改成当前节点值。
 
-```bash
-sudo vim /etc/ssms/storage-agent.env
-```
-
-示例：
+生成后的 Agent 环境变量示例：
 
 ```text
 SSMS_SERVER_URL=http://192.168.1.187:8080
-SSMS_AGENT_NAME=node01
+SSMS_AGENT_NAME=NodeA
 SSMS_AGENT_ADDRESS=192.168.1.188
 SSMS_AGENT_DISK=/
 SSMS_AGENT_INTERVAL=30s
@@ -227,7 +269,7 @@ curl -X PUT http://127.0.0.1:8080/api/users/username/alice/quota \
 ```bash
 curl -X POST http://127.0.0.1:8080/api/servers/report \
   -H 'Content-Type: application/json' \
-  -d '{"name":"node01","address":"192.168.1.21","cpu_usage":10.5,"memory_usage":40.2,"disk_usage":55.1}'
+  -d '{"name":"NodeA","address":"192.168.1.21","cpu_usage":10.5,"memory_usage":40.2,"disk_usage":55.1}'
 ```
 
 写入日志：
@@ -235,7 +277,7 @@ curl -X POST http://127.0.0.1:8080/api/servers/report \
 ```bash
 curl -X POST http://127.0.0.1:8080/api/logs \
   -H 'Content-Type: application/json' \
-  -d '{"type":"login","username":"alice","server_name":"node01","message":"user logged in"}'
+  -d '{"type":"login","username":"alice","server_name":"NodeA","message":"user logged in"}'
 ```
 
 ## 测试命令

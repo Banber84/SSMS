@@ -8,7 +8,7 @@ Wants=network-online.target
 Type=simple
 EnvironmentFile=-/etc/ssms/storage-agent.env
 Environment=SSMS_SERVER_URL=http://127.0.0.1:8080
-Environment=SSMS_AGENT_NAME=node01
+Environment=SSMS_AGENT_NAME=NodeA
 Environment=SSMS_AGENT_ADDRESS=127.0.0.1
 Environment=SSMS_AGENT_DISK=/
 Environment=SSMS_AGENT_INTERVAL=30s

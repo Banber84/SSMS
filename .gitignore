@@ -93,6 +93,9 @@ logs/
 
 config.yaml
 config.local.yaml
+configs/site.env
+configs/storage-agent.env
+configs/storage-server.env
 
 *.pem
 *.key

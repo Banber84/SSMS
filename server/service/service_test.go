@@ -77,7 +77,7 @@ func TestStoreManagementFlow(t *testing.T) {
 	}
 
 	server, err := store.UpsertServerReport(models.ServerReportRequest{
-		Name:        "node01",
+		Name:        "NodeA",
 		Address:     "192.168.1.21",
 		CPUUsage:    11.5,
 		MemoryUsage: 45,
@@ -93,7 +93,7 @@ func TestStoreManagementFlow(t *testing.T) {
 	if _, err := store.CreateLog(models.CreateLogRequest{
 		Type:       "login",
 		Username:   "alice",
-		ServerName: "node01",
+		ServerName: "NodeA",
 		Message:    "user logged in",
 	}); err != nil {
 		t.Fatalf("create log: %v", err)
@@ -120,7 +120,7 @@ func TestDashboardMarksStaleServersOffline(t *testing.T) {
 
 	store := service.NewStore(db)
 	if _, err := store.UpsertServerReport(models.ServerReportRequest{
-		Name:        "node01",
+		Name:        "NodeA",
 		Address:     "192.168.1.21",
 		CPUUsage:    10,
 		MemoryUsage: 20,
@@ -129,7 +129,7 @@ func TestDashboardMarksStaleServersOffline(t *testing.T) {
 		t.Fatalf("upsert server report: %v", err)
 	}
 
-	if _, err := db.Exec(`UPDATE servers SET online = 1, last_seen = datetime('now', '-3 minutes') WHERE name = 'node01'`); err != nil {
+	if _, err := db.Exec(`UPDATE servers SET online = 1, last_seen = datetime('now', '-3 minutes') WHERE name = 'NodeA'`); err != nil {
 		t.Fatalf("age server report: %v", err)
 	}
 
@@ -157,7 +157,7 @@ func TestDeleteServer(t *testing.T) {
 
 	store := service.NewStore(db)
 	server, err := store.UpsertServerReport(models.ServerReportRequest{
-		Name:        "node01",
+		Name:        "NodeA",
 		Address:     "192.168.1.21",
 		CPUUsage:    10,
 		MemoryUsage: 20,
@@ -184,7 +184,7 @@ func TestDeleteServer(t *testing.T) {
 	}
 	found := false
 	for _, log := range logs {
-		if log.ServerName == "node01" && log.Message == "deleted server status record" {
+		if log.ServerName == "NodeA" && log.Message == "deleted server status record" {
 			found = true
 			break
 		}

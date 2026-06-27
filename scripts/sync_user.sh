@@ -46,7 +46,10 @@ source "$CONFIG_FILE"
 USERNAME="$1"
 shift
 QUOTA_GB="${DEFAULT_QUOTA_GB:-10}"
-NODES_FILE="$PROJECT_ROOT/configs/nodes.conf"
+NODES_FILE="${NODES_FILE:-/etc/ssms/nodes.conf}"
+if [[ ! -f "$NODES_FILE" ]]; then
+  NODES_FILE="$PROJECT_ROOT/configs/nodes.conf"
+fi
 SYNC_STORAGE="1"
 SYNC_NODES="1"
 PASSWORD_STDIN="0"

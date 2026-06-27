@@ -6,7 +6,7 @@ usage() {
 用法：
   sudo scripts/create_node_user.sh USERNAME [--password-stdin]
 
-在 Node01/Node02 上创建 Linux 登录用户。
+在 NodeA/NodeB 上创建 Linux 登录用户。
 请使用与 Storage Server 上 Samba 用户一致的密码。
 使用 --password-stdin 时，从标准输入读取一行密码，适合同步脚本远程调用。
 EOF

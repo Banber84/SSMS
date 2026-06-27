@@ -10,7 +10,7 @@ Storage Server
 ├── Linux 用户权限
 └── 文件系统用户配额
 
-Node01 / Node02
+NodeA / NodeB
 ├── Ubuntu Server
 ├── 本地 Linux 登录用户
 ├── cifs-utils

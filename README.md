@@ -47,28 +47,26 @@
 
 ## 系统架构
 
-```text
-                           +----------------------+
-                           |    Samba Storage     |
-                           |      Server          |
-                           +----------+-----------+
-                                      |
-                   ----------------------------------------
-                   |                                      |
-                   v                                      v
-          +-------------------+                +-------------------+
-          |      Node 01      |                |      Node 02      |
-          |   Login Server    |                |   Login Server    |
-          +-------------------+                +-------------------+
-                   \                                      /
-                    \                                    /
-                     \                                  /
-                      \                                /
-                       v                              v
-                    +------------------------------------+
-                    |       Web Management Server        |
-                    |      Go + Gin + SQLite            |
-                    +------------------------------------+
+```mermaid
+flowchart TB
+    User["用户"]
+    Admin["管理员"]
+
+    NodeA["NodeA<br/>登录节点"]
+    NodeB["NodeB<br/>登录节点"]
+    Storage["Storage Server<br/>Samba / Linux Quota"]
+    Management["Web Management<br/>Go + Gin"]
+    DB["SQLite<br/>管理数据"]
+
+    User -->|"登录"| NodeA
+    User -->|"登录"| NodeB
+    NodeA -->|"pam_mount 自动挂载"| Storage
+    NodeB -->|"pam_mount 自动挂载"| Storage
+    Storage -->|"用户目录 / 配额 / 使用量"| Management
+    NodeA -->|"Agent 状态上报"| Management
+    NodeB -->|"Agent 状态上报"| Management
+    Admin -->|"Web 页面 / REST API"| Management
+    Management --> DB
 ```
 
 ### 节点说明
@@ -82,7 +80,7 @@
 - 权限控制
 - 存储空间管理
 
-#### Node 01 / Node 02
+#### NodeA / NodeB
 
 负责：
 
@@ -150,6 +148,7 @@ ServerStorageManagementSystem/
 │   ├── create_user.sh
 │   ├── delete_node_user.sh
 │   ├── delete_user.sh
+│   ├── apply_site_config.sh
 │   ├── install_node_client.sh
 │   ├── install_storage_server.sh
 │   ├── quota_manager.sh
@@ -162,6 +161,7 @@ ServerStorageManagementSystem/
 ├── configs/
 │   ├── nodes.conf
 │   ├── pam_mount.conf.xml
+│   ├── site.env.example
 │   ├── smb.conf
 │   ├── storage-agent.env.example
 │   ├── storage-agent.service

@@ -1,6 +1,6 @@
 # 登录节点部署文档
 
-以下步骤需要在 Node01 和 Node02 上分别执行。
+以下步骤需要在 NodeA 和 NodeB 上分别执行。
 
 ## 1. 环境要求
 
@@ -13,8 +13,8 @@ docs/deployment/winpc-ubuntu26.md
 登录节点建议使用固定 IP：
 
 ```text
-Node01: 192.168.56.11
-Node02: 192.168.56.12
+NodeA: 192.168.56.11
+NodeB: 192.168.56.12
 ```
 
 ## 2. 设置 Storage Server 地址
@@ -51,7 +51,7 @@ sudo scripts/create_node_user.sh alice
 
 ## 5. 自动挂载行为
 
-用户 `alice` 登录 Node01 或 Node02 后，系统会自动挂载：
+用户 `alice` 登录 NodeA 或 NodeB 后，系统会自动挂载：
 
 ```text
 //192.168.56.10/alice -> /home/alice/storage
