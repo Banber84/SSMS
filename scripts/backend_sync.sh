@@ -118,7 +118,7 @@ upsert_user() {
   safe_username="$(json_escape "$username")"
 
   if [[ -n "$user_id" ]]; then
-    curl_api -X PUT "$API_BASE/api/users/$username/quota" \
+    curl_api -X PUT "$API_BASE/api/users/username/$username/quota" \
       -H 'Content-Type: application/json' \
       -d "{\"quota_bytes\":$quota_bytes}" >/dev/null
     echo "后台用户已存在，已同步配额：$username"
@@ -141,7 +141,7 @@ update_quota() {
   fi
 
   quota_bytes="$(quota_gb_to_bytes "$quota_gb")"
-  curl_api -X PUT "$API_BASE/api/users/$username/quota" \
+  curl_api -X PUT "$API_BASE/api/users/username/$username/quota" \
     -H 'Content-Type: application/json' \
     -d "{\"quota_bytes\":$quota_bytes}" >/dev/null
   echo "后台配额已同步：$username"
@@ -163,7 +163,7 @@ sync_usage() {
     used_bytes=$((used_kb * 1024))
     safe_username="$(json_escape "$username")"
     safe_path="$(json_escape "$path")"
-    curl_api -X POST "$API_BASE/api/storage/by-username" \
+    curl_api -X POST "$API_BASE/api/storage/username" \
       -H 'Content-Type: application/json' \
       -d "{\"username\":\"$safe_username\",\"used_bytes\":$used_bytes,\"path\":\"$safe_path\"}" >/dev/null
     if [[ "$summary" == "--format-summary" ]]; then
