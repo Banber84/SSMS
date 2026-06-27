@@ -195,22 +195,15 @@ ssh user@192.168.1.188 'sudo install -m 0755 /tmp/storage-agent /usr/local/bin/s
 
 ## systemd 部署 Agent
 
-Agent 常驻运行模板见：
-
-```text
-configs/storage-agent.service
-```
-
 在每台需要上报状态的节点上执行：
 
 ```bash
-sudo mkdir -p /etc/ssms
-sudo install -m 0755 bin/storage-agent /usr/local/bin/storage-agent
-sudo scripts/apply_site_config.sh --config configs/site.env --output-dir /etc/ssms
-sudo install -m 0644 configs/storage-agent.service /etc/systemd/system/storage-agent.service
+sudo scripts/install_storage_agent.sh
 ```
 
-每台节点部署前，在 `configs/site.env` 中把 `SSMS_AGENT_NAME` 和 `SSMS_AGENT_ADDRESS` 改成当前节点值。`SSMS_SERVER_URL`、`SSMS_AGENT_NAME`、`SSMS_AGENT_ADDRESS` 不能为空，否则 systemd 会拒绝启动 Agent。
+安装脚本会检查 `bin/storage-agent`、`configs/site.env` 和 Agent 必填环境变量。每台节点部署前，在 `configs/site.env` 中把 `SSMS_AGENT_NAME` 和 `SSMS_AGENT_ADDRESS` 改成当前节点值。`SSMS_SERVER_URL`、`SSMS_AGENT_NAME`、`SSMS_AGENT_ADDRESS` 不能为空，否则安装脚本和 systemd 都会拒绝启动 Agent。
+
+当前 Go 后端是 HTTP 服务，`SSMS_SERVER_URL` 应使用 `http://主节点IP:8080`，不要写成 `https://`。
 
 生成后的 Agent 环境变量示例：
 

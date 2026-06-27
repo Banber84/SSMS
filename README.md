@@ -160,6 +160,7 @@ ServerStorageManagementSystem/
 │   ├── apply_site_config.sh
 │   ├── install_management_server.sh
 │   ├── install_node_client.sh
+│   ├── install_storage_agent.sh
 │   ├── install_storage_server.sh
 │   ├── quota_manager.sh
 │   ├── request_user_delete.sh
