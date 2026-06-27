@@ -16,9 +16,9 @@ usage() {
 在 Storage Server 上一键接入新的登录节点：
   1. 更新 configs/nodes.conf。
   2. 配置 configs/sync.conf。
-  3. 复制 configs、scripts、docs/deployment 到新节点。
-  4. 在新节点执行 install_node_client.sh。
-  5. 配置 Storage Server <-> 新节点 双向 SSH key。
+  3. 配置 Storage Server <-> 新节点 双向 SSH key。
+  4. 复制 configs、scripts、docs 到新节点。
+  5. 写入新节点的 Storage Server 运行配置并安装客户端。
   6. 配置双方 sudoers 免密同步脚本。
   7. 验证创建/删除同步脚本可远程调用。
 
@@ -29,6 +29,7 @@ usage() {
   --storage-project DIR    Storage Server 项目目录，默认当前项目目录
   --skip-copy              不复制项目文件到新节点
   --skip-install           不执行 install_node_client.sh
+  --skip-existing-users    不把 Storage Server 的现有用户补建到新节点
 
 示例：
   sudo scripts/join_node.sh nodeC 192.168.1.130 nodec1
@@ -67,6 +68,7 @@ STORAGE_PROJECT_DIR="$PROJECT_ROOT"
 NODE_PROJECT_DIR="/home/$NODE_USER/ServerStorageManagementSystem"
 SKIP_COPY="0"
 SKIP_INSTALL="0"
+SYNC_EXISTING_USERS="1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -92,6 +94,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-install)
       SKIP_INSTALL="1"
+      shift
+      ;;
+    --skip-existing-users)
+      SYNC_EXISTING_USERS="0"
       shift
       ;;
     -h|--help)
@@ -124,6 +130,8 @@ fi
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new)
 NODE_TARGET="$NODE_USER@$NODE_HOST"
 STORAGE_TARGET="$STORAGE_USER@$STORAGE_HOST"
+SSH_CMD=(sudo -u "$STORAGE_USER" ssh)
+SCP_CMD=(sudo -u "$STORAGE_USER" scp)
 
 user_home() {
   local user="$1"
@@ -203,30 +211,70 @@ EOF
 }
 
 write_node_sudoers() {
-  local content
+  local content encoded
   content="$(cat <<EOF
 $NODE_USER ALL=(ALL) NOPASSWD: $NODE_PROJECT_DIR/scripts/create_node_user.sh
 $NODE_USER ALL=(ALL) NOPASSWD: $NODE_PROJECT_DIR/scripts/delete_node_user.sh
 EOF
 )"
-  printf '%s\n' "$content" | ssh -tt "${SSH_OPTS[@]}" "$NODE_TARGET" \
-    "sudo tee /etc/sudoers.d/ssms-node-sync >/dev/null && sudo chmod 0440 /etc/sudoers.d/ssms-node-sync && sudo visudo -cf /etc/sudoers.d/ssms-node-sync"
+  encoded="$(printf '%s\n' "$content" | base64 | tr -d '\n')"
+  echo "配置 $NODE_NAME 的 sudoers；若出现 sudo 提示，请输入 $NODE_USER 的登录密码。"
+  "${SSH_CMD[@]}" -tt "${SSH_OPTS[@]}" "$NODE_TARGET" \
+    "printf '%s' '$encoded' | base64 -d | sudo tee /etc/sudoers.d/ssms-node-sync >/dev/null && sudo chmod 0440 /etc/sudoers.d/ssms-node-sync && sudo visudo -cf /etc/sudoers.d/ssms-node-sync"
 }
 
 copy_project_files() {
-  ssh "${SSH_OPTS[@]}" "$NODE_TARGET" "mkdir -p '$NODE_PROJECT_DIR'"
-  scp -r "${SSH_OPTS[@]}" "$PROJECT_ROOT/configs" "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/docs/deployment" "$NODE_TARGET:$NODE_PROJECT_DIR/"
+  "${SSH_CMD[@]}" "${SSH_OPTS[@]}" "$NODE_TARGET" "mkdir -p '$NODE_PROJECT_DIR'"
+  "${SCP_CMD[@]}" -r "${SSH_OPTS[@]}" \
+    "$PROJECT_ROOT/configs" "$PROJECT_ROOT/scripts" "$PROJECT_ROOT/docs" \
+    "$NODE_TARGET:$NODE_PROJECT_DIR/"
+}
+
+sync_node_runtime_configs() {
+  local tmp status
+  tmp="$(mktemp)"
+  awk -v storage_host="$STORAGE_HOST" '
+    BEGIN { updated = 0 }
+    /^STORAGE_SERVER=/ {
+      printf "STORAGE_SERVER=\"%s\"\n", storage_host
+      updated = 1
+      next
+    }
+    { print }
+    END {
+      if (!updated) {
+        printf "STORAGE_SERVER=\"%s\"\n", storage_host
+      }
+    }
+  ' "$PROJECT_ROOT/configs/system.conf" > "$tmp"
+  chmod 0644 "$tmp"
+
+  status=0
+  "${SSH_CMD[@]}" "${SSH_OPTS[@]}" "$NODE_TARGET" \
+    "mkdir -p '$NODE_PROJECT_DIR/configs'" || status=$?
+  if [[ "$status" -eq 0 ]]; then
+    "${SCP_CMD[@]}" "${SSH_OPTS[@]}" "$tmp" \
+      "$NODE_TARGET:$NODE_PROJECT_DIR/configs/system.conf" || status=$?
+  fi
+  if [[ "$status" -eq 0 ]]; then
+    "${SCP_CMD[@]}" "${SSH_OPTS[@]}" "$PROJECT_ROOT/configs/sync.conf" \
+      "$NODE_TARGET:$NODE_PROJECT_DIR/configs/sync.conf" || status=$?
+  fi
+  rm -f "$tmp"
+  return "$status"
 }
 
 install_node_client() {
-  ssh -tt "${SSH_OPTS[@]}" "$NODE_TARGET" "cd '$NODE_PROJECT_DIR' && sudo scripts/install_node_client.sh"
+  echo "安装 $NODE_NAME 客户端；若出现 sudo 提示，请输入 $NODE_USER 的登录密码。"
+  "${SSH_CMD[@]}" -tt "${SSH_OPTS[@]}" "$NODE_TARGET" \
+    "cd '$NODE_PROJECT_DIR' && sudo scripts/install_node_client.sh"
 }
 
 configure_ssh_keys() {
   local storage_pub node_pub
   storage_pub="$(ensure_local_ssh_key "$STORAGE_USER")"
 
-  printf '%s\n' "$storage_pub" | ssh "${SSH_OPTS[@]}" "$NODE_TARGET" '
+  printf '%s\n' "$storage_pub" | "${SSH_CMD[@]}" "${SSH_OPTS[@]}" "$NODE_TARGET" '
     mkdir -p ~/.ssh
     chmod 700 ~/.ssh
     touch ~/.ssh/authorized_keys
@@ -237,7 +285,7 @@ configure_ssh_keys() {
     rm -f "$tmp"
   '
 
-  node_pub="$(ssh "${SSH_OPTS[@]}" "$NODE_TARGET" '
+  node_pub="$("${SSH_CMD[@]}" "${SSH_OPTS[@]}" "$NODE_TARGET" '
     mkdir -p ~/.ssh
     chmod 700 ~/.ssh
     if [ ! -f ~/.ssh/id_ed25519.pub ]; then
@@ -248,30 +296,80 @@ configure_ssh_keys() {
   append_authorized_key "$STORAGE_USER" "$node_pub"
 }
 
-verify_join() {
-  sudo -u "$STORAGE_USER" ssh "${SSH_OPTS[@]}" "$NODE_TARGET" \
+node_sudoers_ready() {
+  "${SSH_CMD[@]}" -n "${SSH_OPTS[@]}" "$NODE_TARGET" \
     "sudo -n '$NODE_PROJECT_DIR/scripts/create_node_user.sh' --help >/dev/null && sudo -n '$NODE_PROJECT_DIR/scripts/delete_node_user.sh' --help >/dev/null"
+}
 
-  ssh "${SSH_OPTS[@]}" "$NODE_TARGET" \
+verify_join() {
+  node_sudoers_ready
+  "${SSH_CMD[@]}" "${SSH_OPTS[@]}" "$NODE_TARGET" \
     "ssh ${SSH_OPTS[*]} '$STORAGE_TARGET' \"sudo -n '$STORAGE_PROJECT_DIR/scripts/sync_user.sh' --help >/dev/null && sudo -n '$STORAGE_PROJECT_DIR/scripts/sync_delete_user.sh' --help >/dev/null\""
+}
+
+sync_existing_users() {
+  local user_dir username password_hash
+  local synced_count=0
+  local skipped_count=0
+
+  if [[ ! -d "$STORAGE_ROOT" ]]; then
+    echo "存储根目录不存在，无法同步现有用户：$STORAGE_ROOT"
+    return 1
+  fi
+
+  echo "检查 Storage Server 现有用户并补建到 $NODE_NAME。"
+  while IFS= read -r user_dir; do
+    username="$(basename "$user_dir")"
+    case "$username" in
+      _deleted_*) continue ;;
+    esac
+    if [[ ! "$username" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+      echo "跳过非法用户名目录：$user_dir"
+      skipped_count=$((skipped_count + 1))
+      continue
+    fi
+
+    password_hash="$(getent shadow "$username" | cut -d: -f2)"
+    if [[ ! "$password_hash" =~ ^\$[^:]+$ ]]; then
+      echo "跳过无法读取有效密码哈希的用户：$username"
+      skipped_count=$((skipped_count + 1))
+      continue
+    fi
+
+    printf '%s\n' "$password_hash" | "${SSH_CMD[@]}" "${SSH_OPTS[@]}" "$NODE_TARGET" \
+      "sudo -n '$NODE_PROJECT_DIR/scripts/create_node_user.sh' '$username' --password-hash-stdin"
+    unset password_hash
+    synced_count=$((synced_count + 1))
+  done < <(find "$STORAGE_ROOT" -mindepth 1 -maxdepth 1 -type d | sort)
+
+  echo "现有用户同步完成：同步 $synced_count，跳过 $skipped_count"
 }
 
 echo "接入新节点：$NODE_NAME ($NODE_TARGET)"
 write_nodes_conf
 write_sync_conf
 write_storage_sudoers
+configure_ssh_keys
 
 if [[ "$SKIP_COPY" == "0" ]]; then
   copy_project_files
 fi
 
+sync_node_runtime_configs
+
 if [[ "$SKIP_INSTALL" == "0" ]]; then
   install_node_client
 fi
 
-configure_ssh_keys
-write_node_sudoers
+if node_sudoers_ready; then
+  echo "$NODE_NAME 的同步 sudoers 已配置，跳过重复写入。"
+else
+  write_node_sudoers
+fi
 verify_join
+if [[ "$SYNC_EXISTING_USERS" == "1" ]]; then
+  sync_existing_users
+fi
 
 echo "新节点接入完成：$NODE_NAME"
 echo "节点清单：$PROJECT_ROOT/configs/nodes.conf"

@@ -131,12 +131,13 @@ sudo scripts/join_node.sh nodeC 192.168.1.130 nodec1
 ```text
 1. 将 nodeC 写入 configs/nodes.conf。
 2. 更新 configs/sync.conf 中的 Storage Server 连接信息。
-3. 将 configs、scripts、docs/deployment 复制到新节点项目目录。
-4. 在新节点执行 install_node_client.sh。
-5. 配置 Storage Server 到新节点的 SSH key。
-6. 配置新节点到 Storage Server 的 SSH key。
+3. 配置 Storage Server 与新节点的双向 SSH key。
+4. 将 configs、scripts、docs 复制到新节点项目目录。
+5. 将正确的 Storage Server 地址写入新节点配置并执行 install_node_client.sh。
+6. 后续 SSH 和 SCP 均由指定的 Storage Server 管理用户发起。
 7. 配置 Storage Server 和新节点两边的 sudoers 免密同步命令。
 8. 验证创建和删除同步脚本可以远程调用。
+9. 扫描 Storage Server 的现有用户并补建到新节点。
 ```
 
 默认新节点项目目录为：
@@ -161,7 +162,22 @@ sudo scripts/join_node.sh nodeC 192.168.1.130 nodec1 \
   --storage-project /home/a2/ServerStorageManagementSystem
 ```
 
-脚本执行过程中，如果新节点还没有配置 SSH key，第一次连接可能需要输入新节点用户密码；如果新节点需要执行 `sudo install_node_client.sh`，也可能需要输入新节点用户的 sudo 密码。
+脚本执行过程中，如果新节点还没有配置 SSH key，第一次连接需要输入新节点用户密码。安装客户端和配置远端 sudoers时，按提示输入新节点用户的 sudo 密码。
+
+Storage Server 创建用户时会让 Linux 与 Samba 使用相同密码。接入新节点时，
+脚本由 root 读取 Linux shadow 中不可逆的密码哈希，经 SSH 管道写入新节点，
+因此无需保存或重新输入明文统一密码。哈希不会写入项目配置、日志或额外文件。
+Storage Server 是密码哈希的权威来源；新节点已有同名用户时也会覆盖为该哈希，
+确保节点登录密码与 Samba 密码保持一致。如果只接入基础设施、不补建现有用户，可以使用：
+
+```bash
+sudo scripts/join_node.sh nodeC 192.168.1.130 nodec1 --skip-existing-users
+```
+
+统一密码必须通过 `sync_user.sh` 创建或更新，不能只执行 `smbpasswd`，
+否则 Storage Server 的 Linux shadow 哈希会与 Samba 密码不一致。
+
+脚本的配置写入均可重复执行；某一步中断后可以使用相同参数重新运行。
 
 接入完成后，可以直接测试从新节点发起创建：
 
