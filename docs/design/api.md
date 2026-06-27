@@ -63,20 +63,34 @@ http://127.0.0.1:8080
 - `quota_bytes` 为用户配额，单位是字节。
 - 该接口只写入后台数据库，不直接创建 Linux 用户。
 
-### `PUT /api/users/{id或username}/quota`
+### `PUT /api/users/id/{id}/quota`
 
-修改用户配额。路径参数既可以传后台数据库用户 ID，也可以直接传 Linux/Samba 用户名。
+按后台数据库用户 ID 修改用户配额。
 
-按 ID 修改：
+请求路径示例：
 
 ```text
-PUT /api/users/1/quota
+PUT /api/users/id/1/quota
 ```
 
-按用户名修改：
+请求示例：
+
+```json
+{
+  "quota_bytes": 2147483648
+}
+```
+
+响应为更新后的用户记录。
+
+### `PUT /api/users/username/{username}/quota`
+
+按 Linux/Samba 用户名修改用户配额。该接口用于 A 侧脚本对接，脚本无需先查询后台数据库 ID。
+
+请求路径示例：
 
 ```text
-PUT /api/users/alice/quota
+PUT /api/users/username/alice/quota
 ```
 
 请求示例：
@@ -91,9 +105,8 @@ PUT /api/users/alice/quota
 
 说明：
 
-- 如果路径参数是正整数，后台按用户 ID 查询。
-- 如果路径参数不是正整数，后台按 `username` 查询。
-- 该接口方便 A 的配额脚本在执行成功后直接用用户名同步后台状态。
+- `username` 必须已经存在于后台 `users` 表。
+- 该接口只同步后台配额记录，实际 Linux quota 仍由 A 侧脚本修改。
 
 ### `DELETE /api/users/{id}`
 
@@ -127,7 +140,7 @@ PUT /api/users/alice/quota
 
 响应为更新后的存储统计记录。
 
-### `POST /api/storage/by-username`
+### `POST /api/storage/username`
 
 按用户名写入或更新用户存储使用量。该接口更适合和 A 的 `storage_usage_report.sh` 脚本对接，因为脚本输出通常包含用户名而不是后台数据库 ID。
 

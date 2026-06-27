@@ -142,19 +142,32 @@ ServerStorageManagementSystem/
 │   ├── templates/
 │   └── main.go
 ├── agent/
-│   └── main.go
+│   ├── README.md
+│   ├── main.go
+│   └── storage-agent.service
 ├── scripts/
 │   ├── create_node_user.sh
 │   ├── create_user.sh
+│   ├── delete_node_user.sh
 │   ├── delete_user.sh
 │   ├── install_node_client.sh
 │   ├── install_storage_server.sh
 │   ├── quota_manager.sh
+│   ├── request_user_delete.sh
+│   ├── request_user_sync.sh
 │   ├── storage_usage_report.sh
+│   ├── sync_delete_user.sh
+│   ├── sync_user.sh
 │   └── test_mount.sh
 ├── configs/
+│   ├── nodes.conf
 │   ├── pam_mount.conf.xml
 │   ├── smb.conf
+│   ├── storage-agent.env.example
+│   ├── storage-agent.service
+│   ├── storage-server.env.example
+│   ├── storage-server.service
+│   ├── sync.conf
 │   └── system.conf
 ├── docs/
 │   ├── deployment/

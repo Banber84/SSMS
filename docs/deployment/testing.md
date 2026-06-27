@@ -1,210 +1,112 @@
 # 测试方案
 
+本文档作为测试入口索引和最小验收流程。详细实测过程保留在独立测试报告中，避免重复维护。
+
 ## 测试环境
 
-本项目当前按 `ubuntu-26.04-live-server-amd64` 编写部署步骤。Ubuntu 可以安装在 Windows PC 的虚拟机、双系统或物理机环境中。
+项目按 Ubuntu Server 编写部署步骤，支持虚拟机、物理机或双系统环境。
 
-第一版 demo 已验证的局域网测试环境：
-
-```text
-Management Server: 192.168.1.187
-访问地址:          http://192.168.1.187:8080
-```
-
-建议准备三台 Ubuntu Server 虚拟机或物理机：
+推荐三机结构：
 
 ```text
-Storage Server: 192.168.56.10
-Node01:         192.168.56.11
-Node02:         192.168.56.12
+Storage Server: 集中存储、Samba、quota、用户目录
+NodeA/NodeB:    登录节点、pam_mount 自动挂载
+Management:     Go 管理后台，可与 Storage Server 同机
 ```
 
-安装准备和静态 IP 配置参考：
+当前实测环境中，Storage Server / Management Server 使用：
+
+```text
+192.168.1.187
+```
+
+虚拟机安装和静态 IP 配置参考：
 
 ```text
 docs/deployment/winpc-ubuntu26.md
 ```
 
-## 第一版 demo 测试流程
+## 测试报告索引
 
-第一版 demo 重点验证 Go 管理后台页面和 REST API 是否可用。管理后台运行在局域网服务器 `192.168.1.187`，页面访问地址为：
+| 文档 | 内容 |
+| --- | --- |
+| `docs/deployment/demo-test-report.md` | 第一版 Web 管理后台、REST API、Agent 上报测试 |
+| `docs/deployment/storage-server-test-report.md` | Storage Server 单机 Samba、quota、用户隔离测试 |
+| `docs/deployment/full-integration-test-report.md` | 三虚拟机完整联调、跨节点访问、用户同步与删除同步测试 |
 
-```text
-http://192.168.1.187:8080
+## 最小验收流程
+
+### 1. 管理后台
+
+启动后台：
+
+```bash
+go run ./server -addr 0.0.0.0:8080 -db demo.db
 ```
 
-### 测试 1：页面访问
+健康检查：
 
-在浏览器打开：
-
-```text
-http://192.168.1.187:8080
+```bash
+curl http://192.168.1.187:8080/api/health
 ```
 
 预期结果：
 
-- 管理后台首页可以正常打开。
-- 页面显示用户数、节点数、存储统计和最近日志区域。
+```json
+{"status":"ok"}
+```
 
-### 测试 2：用户管理
-
-打开：
+页面检查：
 
 ```text
+http://192.168.1.187:8080
 http://192.168.1.187:8080/users
-```
-
-创建测试用户：
-
-```text
-用户名: alice
-姓名: Alice
-邮箱: alice@example.com
-配额: 1073741824
-```
-
-预期结果：
-
-- 用户表格出现 `alice`。
-- 配额字段正常显示。
-- 页面提供配额修改和删除入口。
-
-### 测试 3：存储统计
-
-通过 API 写入测试数据：
-
-```bash
-curl -X POST http://192.168.1.187:8080/api/storage \
-  -H 'Content-Type: application/json' \
-  -d '{"user_id":1,"used_bytes":1048576,"path":"/srv/samba/users/alice"}'
-```
-
-打开：
-
-```text
 http://192.168.1.187:8080/storage
-```
-
-预期结果：
-
-- 页面显示用户 `alice`。
-- 已用空间显示为 `1048576`。
-- 剩余空间可以按配额自动计算。
-- 路径显示为 `/srv/samba/users/alice`。
-
-### 测试 4：节点状态
-
-通过 API 模拟节点上报：
-
-```bash
-curl -X POST http://192.168.1.187:8080/api/servers/report \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"node01","address":"192.168.1.187","cpu_usage":12.5,"memory_usage":40.2,"disk_usage":55.1}'
-```
-
-打开：
-
-```text
 http://192.168.1.187:8080/servers
-```
-
-预期结果：
-
-- 页面显示 `node01`。
-- 节点状态显示在线。
-- CPU、内存、磁盘使用率正常显示。
-
-### 测试 5：日志查看
-
-写入测试日志：
-
-```bash
-curl -X POST http://192.168.1.187:8080/api/logs \
-  -H 'Content-Type: application/json' \
-  -d '{"type":"login","username":"alice","server_name":"node01","message":"user logged in"}'
-```
-
-打开：
-
-```text
 http://192.168.1.187:8080/logs
 ```
 
-预期结果：
+### 2. Storage Server
 
-- 日志页面显示 `login` 类型日志。
-- 用户显示为 `alice`。
-- 节点显示为 `node01`。
-- 日志内容显示为 `user logged in`。
-
-### 测试 6：首页汇总
-
-回到首页：
-
-```text
-http://192.168.1.187:8080
-```
-
-预期结果：
-
-- 用户数量更新。
-- 节点在线状态更新。
-- 存储用量汇总更新。
-- 最近日志显示刚写入的日志。
-
-## 测试 1：用户隔离
-
-在 Storage Server 上创建两个用户：
+安装并启用基础能力：
 
 ```bash
+sudo scripts/install_storage_server.sh
+sudo scripts/quota_manager.sh enable
 sudo scripts/create_user.sh alice --quota-gb 1
 sudo scripts/create_user.sh bob --quota-gb 1
 ```
 
-检查目录权限：
+验证用户目录隔离：
 
 ```bash
 ls -ld /srv/samba/users/alice /srv/samba/users/bob
-```
-
-预期结果：
-
-```text
-drwx------ alice storageusers /srv/samba/users/alice
-drwx------ bob   storageusers /srv/samba/users/bob
-```
-
-尝试跨用户访问：
-
-```bash
+smbclient //localhost/alice -U alice -c 'ls'
 smbclient //localhost/bob -U alice -c 'ls'
 ```
 
-预期结果：访问被拒绝。
-
-## 测试 2：跨节点访问同一份数据
-
-在 Node01 上以 `alice` 用户执行：
-
-```bash
-echo node01 > /home/alice/storage/shared.txt
-```
-
-在 Node02 上以 `alice` 用户执行：
-
-```bash
-cat /home/alice/storage/shared.txt
-```
-
 预期结果：
 
-```text
-node01
+- `alice` 可以访问自己的共享目录。
+- `alice` 不能访问 `bob` 的共享目录。
+
+验证配额：
+
+```bash
+sudo scripts/quota_manager.sh report
+quota -u alice
 ```
 
-## 测试 3：登录自动挂载
+### 3. 登录节点
 
-在 Node01 上执行：
+安装登录节点组件：
+
+```bash
+sudo scripts/install_node_client.sh
+sudo scripts/create_node_user.sh alice
+```
+
+用户登录后验证自动挂载：
 
 ```bash
 su - alice
@@ -213,141 +115,79 @@ mount | grep /home/alice/storage
 
 预期结果：可以看到来自 Storage Server 的 CIFS 挂载。
 
-## 测试 4：配额限制
+### 4. 跨节点访问
 
-创建 1 GB 配额用户：
+在 NodeA 上写入：
 
 ```bash
-sudo scripts/create_user.sh quotauser --quota-gb 1
+echo node-a > /home/alice/storage/shared.txt
 ```
 
-在登录节点上以 `quotauser` 用户写入大文件：
+在 NodeB 上读取：
 
 ```bash
-dd if=/dev/zero of=/home/quotauser/storage/quota-test.bin bs=100M count=12 status=progress
-```
-
-预期结果：超过配额后写入失败。
-
-在 Storage Server 上查看配额：
-
-```bash
-sudo scripts/quota_manager.sh report
-quota -u quotauser
-```
-
-## 测试 5：Samba 服务重启
-
-在 Storage Server 上执行：
-
-```bash
-sudo testparm -s
-sudo systemctl restart smbd nmbd
-sudo systemctl is-active smbd nmbd
+cat /home/alice/storage/shared.txt
 ```
 
 预期结果：
 
 ```text
-active
-active
+node-a
 ```
 
-## 测试 6：使用量统计输出
+### 5. 后台数据同步
 
-在 Storage Server 上执行：
+同步用户：
 
 ```bash
-sudo scripts/storage_usage_report.sh --format csv
-sudo scripts/storage_usage_report.sh --format json
+curl -X POST http://192.168.1.187:8080/api/users \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","full_name":"Alice","email":"","quota_bytes":1073741824}'
 ```
 
-预期结果：每个有效用户目录都会输出 `username`、`path` 和 `used_kb`。
+同步配额：
 
-## Storage Server 单机实测记录
+```bash
+curl -X PUT http://192.168.1.187:8080/api/users/username/alice/quota \
+  -H 'Content-Type: application/json' \
+  -d '{"quota_bytes":1073741824}'
+```
 
-测试环境：
+同步存储用量：
+
+```bash
+curl -X POST http://192.168.1.187:8080/api/storage/username \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","used_bytes":1048576,"path":"/srv/samba/users/alice"}'
+```
+
+### 6. Agent 节点监控
+
+单次上报：
+
+```bash
+go run ./agent \
+  -server http://192.168.1.187:8080 \
+  -name node-a \
+  -address 192.168.1.188 \
+  -disk / \
+  -once
+```
+
+页面验证：
 
 ```text
-系统：Ubuntu 26.04 Server
-虚拟机 IP：192.168.1.187
-登录用户：a2
-测试范围：仅 Storage Server，Node01/Node02 尚未部署
+http://192.168.1.187:8080/servers
 ```
 
-实测结果：
+预期结果：节点在线，CPU、内存、磁盘使用率正常显示。
 
-```text
-1. /srv/samba/users 位于根分区 /，文件系统为 ext4。
-2. /etc/fstab 已为根分区增加 defaults,usrquota,grpquota。
-3. findmnt 输出包含 rw,relatime,quota,usrquota,grpquota。
-4. quota_manager.sh enable 成功启用用户 quota。
-5. create_user.sh 成功创建 alice 和 bob。
-6. /srv/samba/users/alice 与 /srv/samba/users/bob 权限均为 0700，属主分别为 alice 和 bob。
-7. smbclient //localhost/alice -U alice 可以列目录、创建目录、删除目录。
-8. smbclient //localhost/bob -U alice 访问失败，用户隔离生效。
-9. storage_usage_report.sh 可输出 alice、bob 的 CSV 和 JSON 使用量，初始目录均约 16 KB。
-10. alice 写入超过 1 GB 测试文件时出现 Disk quota exceeded，配额限制生效。
-11. quota 测试文件已清理。
-```
+## 通过标准
 
-本次未覆盖：
-
-```text
-1. Node01/Node02 登录自动挂载。
-2. 用户登录任意节点访问同一份数据。
-3. pam_mount 登录触发挂载。
-```
-
-本次测试发现并已改进：
-
-```text
-1. install_storage_server.sh 增加 smbclient 安装，便于直接在 Storage Server 上完成 Samba 自测。
-2. quota_manager.sh 与 delete_user.sh 过滤 Ubuntu 26.04 中可忽略的 tmpfs quota 警告。
-3. quota_manager.sh report 改为只报告 STORAGE_ROOT 所在文件系统，减少无关挂载点噪声。
-```
-
-完整测试报告见：
-
-```text
-docs/deployment/storage-server-test-report.md
-```
-
-## 三虚拟机完整联调实测记录
-
-测试环境：
-
-```text
-系统：Ubuntu 26.04 Server
-Storage Server：192.168.1.187
-NodeA：已部署
-NodeB：已部署
-测试范围：Samba 共享、Node 手动挂载、pam_mount 自动挂载、跨节点共享、用户隔离
-```
-
-实测结果：
-
-```text
-1. NodeA 手动挂载 //192.168.1.187/alice 成功。
-2. NodeB 手动挂载 //192.168.1.187/alice 成功。
-3. NodeB 可以看到 NodeA 创建的 manual-node01.txt。
-4. NodeB 可以创建 manual-nodeb.txt。
-5. alice 登录 NodeB 后，/home/alice/storage 自动挂载成功。
-6. NodeA 可以看到 NodeB 创建的文件。
-7. alice 在不同节点访问同一份共享数据。
-8. bob 登录后看不到 alice 的文件。
-9. Samba 用户隔离、Linux 权限隔离、pam_mount 自动挂载、跨节点共享访问均通过。
-```
-
-测试中遇到并确认的问题：
-
-```text
-1. NodeB 初次测试时缺少本地 alice 用户，执行 create_node_user.sh alice 后解决。
-2. nodeb1 查看 /mnt/ssms-alice 出现 Permission denied，这是 uid=alice、dir_mode=0700 的预期权限隔离结果，使用 sudo 或 sudo -u alice 查看正常。
-```
-
-完整联调报告见：
-
-```text
-docs/deployment/full-integration-test-report.md
-```
+- 管理后台页面和 API 可访问。
+- Storage Server 用户目录、Samba 访问和 quota 生效。
+- 登录节点用户登录后自动挂载个人目录。
+- 同一用户在不同节点访问同一份数据。
+- 用户之间不能互相访问数据。
+- Agent 可以上报节点状态。
+- 后台可以展示用户、配额、存储用量、节点状态和日志。

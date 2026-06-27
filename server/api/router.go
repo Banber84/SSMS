@@ -16,34 +16,39 @@ type Handler struct {
 	store *service.Store
 }
 
+// NewRouter 注册管理后台页面路由和 REST API 路由。
 func NewRouter(store *service.Store) *gin.Engine {
 	handler := &Handler{store: store}
 
 	router := gin.Default()
 	router.LoadHTMLGlob("server/templates/*.html")
 
+	// 页面路由：提供 Bootstrap 管理后台，适合课程 demo 直接浏览操作。
 	router.GET("/", handler.dashboardPage)
 	router.GET("/users", handler.usersPage)
 	router.GET("/storage", handler.storagePage)
 	router.GET("/servers", handler.serversPage)
 	router.GET("/logs", handler.logsPage)
 
+	// 表单路由：页面上的创建、删除、修改操作最终也复用 service 层。
 	router.POST("/users", handler.createUserForm)
 	router.POST("/users/:id/delete", handler.deleteUserForm)
 	router.POST("/users/:id/quota", handler.updateQuotaForm)
 	router.POST("/servers/:id/delete", handler.deleteServerForm)
 	router.POST("/logs", handler.createLogForm)
 
+	// REST API：供 Agent、系统脚本和外部测试命令调用。
 	group := router.Group("/api")
 	group.GET("/health", handler.health)
 	group.GET("/dashboard", handler.dashboard)
 	group.GET("/users", handler.listUsers)
 	group.POST("/users", handler.createUser)
 	group.DELETE("/users/:id", handler.deleteUser)
-	group.PUT("/users/:identifier/quota", handler.updateQuota)
+	group.PUT("/users/id/:id/quota", handler.updateQuota)
+	group.PUT("/users/username/:username/quota", handler.updateQuotaByUsername)
 	group.GET("/storage", handler.listStorageUsage)
 	group.POST("/storage", handler.upsertStorageUsage)
-	group.POST("/storage/by-username", handler.upsertStorageUsageByUsername)
+	group.POST("/storage/username", handler.upsertStorageUsageByUsername)
 	group.GET("/servers", handler.listServers)
 	group.DELETE("/servers/:id", handler.deleteServer)
 	group.POST("/servers/report", handler.reportServer)
@@ -53,6 +58,7 @@ func NewRouter(store *service.Store) *gin.Engine {
 	return router
 }
 
+// 页面处理函数：读取 service 层数据并渲染 HTML 模板。
 func (h *Handler) health(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
@@ -88,6 +94,7 @@ func (h *Handler) dashboard(ctx *gin.Context) {
 	respond(ctx, dashboard, err)
 }
 
+// 用户管理 API：创建、删除用户管理记录，以及同步配额。
 func (h *Handler) listUsers(ctx *gin.Context) {
 	users, err := h.store.ListUsers()
 	respond(ctx, users, err)
@@ -138,21 +145,28 @@ func (h *Handler) deleteUserForm(ctx *gin.Context) {
 }
 
 func (h *Handler) updateQuota(ctx *gin.Context) {
+	id, ok := idParam(ctx)
+	if !ok {
+		return
+	}
 	var req models.UpdateQuotaRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	identifier := ctx.Param("identifier")
-	id, err := strconv.ParseInt(identifier, 10, 64)
-	if err == nil && id > 0 {
-		user, err := h.store.UpdateQuota(id, req.QuotaBytes)
-		respond(ctx, user, err)
+	user, err := h.store.UpdateQuota(id, req.QuotaBytes)
+	respond(ctx, user, err)
+}
+
+func (h *Handler) updateQuotaByUsername(ctx *gin.Context) {
+	var req models.UpdateQuotaRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user, err := h.store.UpdateQuotaByUsername(identifier, req.QuotaBytes)
+	user, err := h.store.UpdateQuotaByUsername(ctx.Param("username"), req.QuotaBytes)
 	respond(ctx, user, err)
 }
 
@@ -173,6 +187,7 @@ func (h *Handler) updateQuotaForm(ctx *gin.Context) {
 	ctx.Redirect(http.StatusSeeOther, "/users")
 }
 
+// 存储统计 API：支持按用户 ID 或用户名写入扫描结果。
 func (h *Handler) listStorageUsage(ctx *gin.Context) {
 	items, err := h.store.ListStorageUsage()
 	respond(ctx, items, err)
@@ -198,6 +213,7 @@ func (h *Handler) upsertStorageUsageByUsername(ctx *gin.Context) {
 	respond(ctx, usage, err)
 }
 
+// 节点监控 API：接收 Agent 上报，并提供管理员清理节点记录能力。
 func (h *Handler) listServers(ctx *gin.Context) {
 	_ = h.store.MarkOfflineAfter(service.ServerOfflineThreshold)
 	servers, err := h.store.ListServers()
@@ -235,6 +251,7 @@ func (h *Handler) deleteServerForm(ctx *gin.Context) {
 	ctx.Redirect(http.StatusSeeOther, "/servers")
 }
 
+// 日志 API：保存系统脚本、登录挂载和后台操作日志。
 func (h *Handler) listLogs(ctx *gin.Context) {
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "100"))
 	logs, err := h.store.ListLogs(limit)
@@ -264,6 +281,7 @@ func (h *Handler) createLogForm(ctx *gin.Context) {
 	ctx.Redirect(http.StatusSeeOther, "/logs")
 }
 
+// 响应辅助函数：集中把 service 错误转换为页面文本或 JSON 响应。
 func render(ctx *gin.Context, template string, data gin.H, err error) {
 	if err != nil {
 		ctx.String(statusCode(err), err.Error())

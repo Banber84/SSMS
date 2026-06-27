@@ -10,18 +10,22 @@ import (
 	"server-storage-management-system/server/models"
 )
 
+// Store 封装所有业务数据访问，API 和页面处理函数都通过它读写 SQLite。
 type Store struct {
 	db *sql.DB
 }
 
+// ServerOfflineThreshold 定义节点多久未上报后被视为离线。
 const ServerOfflineThreshold = 2 * time.Minute
 
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
+// Dashboard 聚合首页需要的用户、节点、存储和日志数据。
 func (s *Store) Dashboard() (models.Dashboard, error) {
 	var dashboard models.Dashboard
+	// 首页也触发离线判定，避免只打开 dashboard 时看到过期在线状态。
 	if err := s.MarkOfflineAfter(ServerOfflineThreshold); err != nil {
 		return dashboard, err
 	}
@@ -43,6 +47,7 @@ func (s *Store) Dashboard() (models.Dashboard, error) {
 	return dashboard, err
 }
 
+// 用户管理：后台只保存管理记录，真实 Linux/Samba 用户由 A 侧脚本创建。
 func (s *Store) CreateUser(req models.CreateUserRequest) (models.User, error) {
 	username := strings.TrimSpace(req.Username)
 	if username == "" {
@@ -169,6 +174,7 @@ func (s *Store) UpdateQuotaByUsername(username string, quotaBytes int64) (models
 	return s.UpdateQuota(user.ID, quotaBytes)
 }
 
+// 存储统计：系统脚本扫描用户目录后，将结果同步到后台数据库。
 func (s *Store) UpsertStorageUsage(req models.UpdateStorageUsageRequest) (models.StorageUsage, error) {
 	if req.UserID <= 0 {
 		return models.StorageUsage{}, errors.New("user_id is required")
@@ -196,6 +202,7 @@ func (s *Store) UpsertStorageUsage(req models.UpdateStorageUsageRequest) (models
 	return s.GetStorageUsage(req.UserID)
 }
 
+// UpsertStorageUsageByUsername 让脚本无需知道后台用户 ID，只需传 Linux/Samba 用户名。
 func (s *Store) UpsertStorageUsageByUsername(req models.UpdateStorageUsageByUsernameRequest) (models.StorageUsage, error) {
 	username := strings.TrimSpace(req.Username)
 	if username == "" {
@@ -257,6 +264,7 @@ func (s *Store) ListStorageUsage() ([]models.StorageUsage, error) {
 	return items, rows.Err()
 }
 
+// 节点监控：Agent 定时上报状态，后台按节点名称更新最近一次状态。
 func (s *Store) UpsertServerReport(req models.ServerReportRequest) (models.ServerStatus, error) {
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
@@ -290,6 +298,7 @@ func (s *Store) UpsertServerReport(req models.ServerReportRequest) (models.Serve
 	return s.GetServerByName(name)
 }
 
+// MarkOfflineAfter 将超过阈值未上报的节点标记为离线，但保留最后上报时间。
 func (s *Store) MarkOfflineAfter(maxAge time.Duration) error {
 	_, err := s.db.Exec(
 		`UPDATE servers SET online = 0, updated_at = CURRENT_TIMESTAMP
@@ -334,6 +343,7 @@ func (s *Store) ListServers() ([]models.ServerStatus, error) {
 	return servers, rows.Err()
 }
 
+// DeleteServer 只清理后台节点状态记录；如果 Agent 继续运行，下一次上报会重新出现。
 func (s *Store) DeleteServer(id int64) error {
 	server, err := s.GetServer(id)
 	if err != nil {
@@ -370,6 +380,7 @@ func (s *Store) GetServer(id int64) (models.ServerStatus, error) {
 	return server, err
 }
 
+// 日志管理：记录用户、节点和系统操作，方便 demo 展示和后续排查。
 func (s *Store) CreateLog(req models.CreateLogRequest) (models.LogEntry, error) {
 	logType := strings.TrimSpace(req.Type)
 	if logType == "" {
@@ -430,6 +441,7 @@ func (s *Store) ListLogs(limit int) ([]models.LogEntry, error) {
 	return logs, rows.Err()
 }
 
+// clampPercent 避免 Agent 异常数据破坏页面百分比展示。
 func clampPercent(value float64) float64 {
 	switch {
 	case value < 0:

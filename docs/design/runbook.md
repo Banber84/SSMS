@@ -209,7 +209,7 @@ curl -X POST http://127.0.0.1:8080/api/storage \
 按用户名写入存储统计：
 
 ```bash
-curl -X POST http://127.0.0.1:8080/api/storage/by-username \
+curl -X POST http://127.0.0.1:8080/api/storage/username \
   -H 'Content-Type: application/json' \
   -d '{"username":"alice","used_bytes":1048576,"path":"/srv/samba/users/alice"}'
 ```
@@ -217,7 +217,7 @@ curl -X POST http://127.0.0.1:8080/api/storage/by-username \
 按用户名修改配额：
 
 ```bash
-curl -X PUT http://127.0.0.1:8080/api/users/alice/quota \
+curl -X PUT http://127.0.0.1:8080/api/users/username/alice/quota \
   -H 'Content-Type: application/json' \
   -d '{"quota_bytes":2147483648}'
 ```

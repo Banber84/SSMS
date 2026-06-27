@@ -10,6 +10,7 @@ import (
 )
 
 func main() {
+	// 管理后台入口：解析运行参数，初始化 SQLite，然后启动 Gin HTTP 服务。
 	addr := flag.String("addr", ":8080", "HTTP listen address")
 	dbPath := flag.String("db", "server-storage.db", "SQLite database path")
 	flag.Parse()

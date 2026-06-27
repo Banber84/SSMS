@@ -8,11 +8,13 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Open 初始化 SQLite 连接，并在服务启动时自动完成表结构迁移。
 func Open(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", path+"?_foreign_keys=on&_busy_timeout=5000")
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite database: %w", err)
 	}
+	// SQLite 是单文件数据库，限制打开连接数可以减少写锁竞争，适合当前课程项目规模。
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 	db.SetConnMaxLifetime(time.Hour)
@@ -28,6 +30,7 @@ func Open(path string) (*sql.DB, error) {
 	return db, nil
 }
 
+// Migrate 创建后台所需的核心表：用户、存储统计、节点状态和日志。
 func Migrate(db *sql.DB) error {
 	statements := []string{
 		`CREATE TABLE IF NOT EXISTS users (
