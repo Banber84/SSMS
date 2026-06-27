@@ -22,6 +22,7 @@ func NewRouter(store *service.Store) *gin.Engine {
 
 	router := gin.Default()
 	router.LoadHTMLGlob("server/templates/*.html")
+	router.Static("/static", "server/static")
 
 	// 页面路由：提供 Bootstrap 管理后台，适合课程 demo 直接浏览操作。
 	router.GET("/", handler.dashboardPage)
@@ -65,28 +66,28 @@ func (h *Handler) health(ctx *gin.Context) {
 
 func (h *Handler) dashboardPage(ctx *gin.Context) {
 	dashboard, err := h.store.Dashboard()
-	render(ctx, "dashboard.html", gin.H{"Title": "Dashboard", "Dashboard": dashboard}, err)
+	render(ctx, "dashboard.html", gin.H{"Title": "概览", "Page": "dashboard", "Dashboard": dashboard}, err)
 }
 
 func (h *Handler) usersPage(ctx *gin.Context) {
 	users, err := h.store.ListUsers()
-	render(ctx, "users.html", gin.H{"Title": "Users", "Users": users}, err)
+	render(ctx, "users.html", gin.H{"Title": "用户管理", "Page": "users", "Users": users}, err)
 }
 
 func (h *Handler) storagePage(ctx *gin.Context) {
 	items, err := h.store.ListStorageUsage()
-	render(ctx, "storage.html", gin.H{"Title": "Storage", "Items": items}, err)
+	render(ctx, "storage.html", gin.H{"Title": "存储统计", "Page": "storage", "Items": items}, err)
 }
 
 func (h *Handler) serversPage(ctx *gin.Context) {
 	_ = h.store.MarkOfflineAfter(service.ServerOfflineThreshold)
 	servers, err := h.store.ListServers()
-	render(ctx, "servers.html", gin.H{"Title": "Servers", "Servers": servers}, err)
+	render(ctx, "servers.html", gin.H{"Title": "节点监控", "Page": "servers", "Servers": servers}, err)
 }
 
 func (h *Handler) logsPage(ctx *gin.Context) {
 	logs, err := h.store.ListLogs(100)
-	render(ctx, "logs.html", gin.H{"Title": "Logs", "Logs": logs}, err)
+	render(ctx, "logs.html", gin.H{"Title": "系统日志", "Page": "logs", "Logs": logs}, err)
 }
 
 func (h *Handler) dashboard(ctx *gin.Context) {

@@ -4,96 +4,106 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="30">
-  <title>{{ .Title }} - Server Storage Management</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>{{ .Title }} - 存储管理系统</title>
+  <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/">Storage Admin</a>
-    <div class="navbar-nav">
-      <a class="nav-link active" href="/">Dashboard</a>
-      <a class="nav-link" href="/users">Users</a>
-      <a class="nav-link" href="/storage">Storage</a>
-      <a class="nav-link" href="/servers">Servers</a>
-      <a class="nav-link" href="/logs">Logs</a>
-    </div>
-  </div>
-</nav>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="/">存储管理系统<small>Server Storage Management</small></a>
+    <nav class="nav" aria-label="主导航">
+      <a class="active" href="/">概览</a>
+      <a href="/users">用户管理</a>
+      <a href="/storage">存储统计</a>
+      <a href="/servers">节点监控</a>
+      <a href="/logs">系统日志</a>
+    </nav>
+  </aside>
 
-<main class="container py-4">
-  <h1 class="h3 mb-4">管理后台</h1>
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="border rounded p-3">
-        <div class="text-secondary small">用户数</div>
-        <div class="fs-3">{{ .Dashboard.UserCount }}</div>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">系统概览</h1>
+        <p class="page-subtitle">集中查看用户、节点和存储使用情况。</p>
       </div>
-    </div>
-    <div class="col-md-3">
-      <div class="border rounded p-3">
-        <div class="text-secondary small">在线节点</div>
-        <div class="fs-3">{{ .Dashboard.OnlineServers }} / {{ .Dashboard.ServerCount }}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="border rounded p-3">
-        <div class="text-secondary small">总配额 Bytes</div>
-        <div class="fs-5">{{ .Dashboard.TotalQuotaBytes }}</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="border rounded p-3">
-        <div class="text-secondary small">已用 Bytes</div>
-        <div class="fs-5">{{ .Dashboard.TotalUsedBytes }}</div>
-      </div>
-    </div>
-  </div>
+      <span class="badge info">每 30 秒自动刷新</span>
+    </header>
 
-  <div class="row g-4">
-    <div class="col-lg-7">
-      <div class="d-flex justify-content-between align-items-center">
-        <h2 class="h5">节点状态</h2>
-        <span class="text-secondary small">每 30 秒自动刷新</span>
+    <section class="grid stats" aria-label="系统指标">
+      <div class="stat-card">
+        <div class="stat-label">用户数</div>
+        <div class="stat-value">{{ .Dashboard.UserCount }}</div>
       </div>
-      <div class="table-responsive">
-        <table class="table table-sm align-middle">
-          <thead><tr><th>名称</th><th>地址</th><th>CPU</th><th>内存</th><th>磁盘</th><th>状态</th></tr></thead>
-          <tbody>
-          {{ range .Dashboard.Servers }}
-            <tr>
-              <td>{{ .Name }}</td>
-              <td>{{ .Address }}</td>
-              <td>{{ printf "%.1f%%" .CPUUsage }}</td>
-              <td>{{ printf "%.1f%%" .MemoryUsage }}</td>
-              <td>{{ printf "%.1f%%" .DiskUsage }}</td>
-              <td>{{ if .Online }}<span class="badge text-bg-success">在线</span>{{ else }}<span class="badge text-bg-secondary">离线</span>{{ end }}</td>
-            </tr>
+      <div class="stat-card">
+        <div class="stat-label">在线节点</div>
+        <div class="stat-value">{{ .Dashboard.OnlineServers }} / {{ .Dashboard.ServerCount }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">总配额</div>
+        <div class="stat-value">{{ .Dashboard.TotalQuotaBytes }} B</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">已用空间</div>
+        <div class="stat-value">{{ .Dashboard.TotalUsedBytes }} B</div>
+      </div>
+    </section>
+
+    <section class="grid columns">
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">节点状态</h2>
+          <a class="btn ghost" href="/servers">查看全部</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+            <tr><th>名称</th><th>地址</th><th>CPU</th><th>内存</th><th>磁盘</th><th>状态</th></tr>
+            </thead>
+            <tbody>
+            {{ range .Dashboard.Servers }}
+              <tr>
+                <td>{{ .Name }}</td>
+                <td>{{ .Address }}</td>
+                <td>{{ printf "%.1f%%" .CPUUsage }}</td>
+                <td>{{ printf "%.1f%%" .MemoryUsage }}</td>
+                <td>{{ printf "%.1f%%" .DiskUsage }}</td>
+                <td>{{ if .Online }}<span class="badge success">在线</span>{{ else }}<span class="badge muted">离线</span>{{ end }}</td>
+              </tr>
+            {{ else }}
+              <tr><td colspan="6" class="empty">暂无节点上报</td></tr>
+            {{ end }}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">最近日志</h2>
+          <a class="btn ghost" href="/logs">查看全部</a>
+        </div>
+        <div class="log-list">
+          {{ range .Dashboard.RecentLogs }}
+            <article class="log-item" data-log-row data-log-type="{{ .Type }}" data-log-message="{{ .Message }}">
+              <div class="log-top">
+                <strong data-log-type="{{ .Type }}">{{ .Type }}</strong>
+                <time class="muted" data-time="{{ .CreatedAt.Format "2006-01-02T15:04:05Z07:00" }}">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</time>
+              </div>
+              <div class="message-cell">{{ .Message }}</div>
+              <div class="log-meta">
+                <span data-log-level>信息</span>
+                {{ if .Username }}<span>用户：{{ .Username }}</span>{{ end }}
+                {{ if .ServerName }}<span>节点：{{ .ServerName }}</span>{{ end }}
+              </div>
+            </article>
           {{ else }}
-            <tr><td colspan="6" class="text-secondary">暂无节点上报</td></tr>
+            <div class="empty">暂无日志</div>
           {{ end }}
-          </tbody>
-        </table>
+        </div>
       </div>
-    </div>
-    <div class="col-lg-5">
-      <h2 class="h5">最近日志</h2>
-      <div class="list-group">
-        {{ range .Dashboard.RecentLogs }}
-          <div class="list-group-item">
-            <div class="d-flex justify-content-between">
-              <strong>{{ .Type }}</strong>
-              <small class="text-secondary">{{ .CreatedAt.Format "2006-01-02 15:04:05" }}</small>
-            </div>
-            <div>{{ .Message }}</div>
-            <small class="text-secondary">{{ .Username }} {{ .ServerName }}</small>
-          </div>
-        {{ else }}
-          <div class="list-group-item text-secondary">暂无日志</div>
-        {{ end }}
-      </div>
-    </div>
-  </div>
-</main>
+    </section>
+  </main>
+</div>
+<script src="/static/js/app.js"></script>
 </body>
 </html>
