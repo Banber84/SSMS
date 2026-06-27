@@ -149,6 +149,9 @@ update_quota() {
 
 sync_usage() {
   local summary="${1:-}"
+  local synced_count=0
+  local skipped_count=0
+  local username path used_kb used_bytes safe_username safe_path
   require_cmd awk
 
   if [[ $EUID -ne 0 ]]; then
@@ -156,20 +159,32 @@ sync_usage() {
     exit 1
   fi
 
-  "$SCRIPT_DIR/storage_usage_report.sh" --format csv | tail -n +2 | while IFS=, read -r username path used_kb; do
+  while IFS=, read -r username path used_kb; do
     if [[ -z "$username" || -z "$path" || -z "$used_kb" ]]; then
       continue
     fi
+
+    if [[ -z "$(user_id_by_username "$username")" ]]; then
+      echo "跳过后台未登记用户：$username（请先执行：sudo scripts/backend_sync.sh upsert-user $username QUOTA_GB）" >&2
+      skipped_count=$((skipped_count + 1))
+      continue
+    fi
+
     used_bytes=$((used_kb * 1024))
     safe_username="$(json_escape "$username")"
     safe_path="$(json_escape "$path")"
     curl_api -X POST "$API_BASE/api/storage/username" \
       -H 'Content-Type: application/json' \
       -d "{\"username\":\"$safe_username\",\"used_bytes\":$used_bytes,\"path\":\"$safe_path\"}" >/dev/null
+    synced_count=$((synced_count + 1))
     if [[ "$summary" == "--format-summary" ]]; then
       echo "已同步用量：$username $used_bytes bytes"
     fi
-  done
+  done < <("$SCRIPT_DIR/storage_usage_report.sh" --format csv | tail -n +2)
+
+  if [[ "$summary" == "--format-summary" ]]; then
+    echo "用量同步完成：成功 $synced_count，跳过 $skipped_count"
+  fi
 }
 
 delete_user_backend() {

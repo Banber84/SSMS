@@ -120,6 +120,12 @@ sudo scripts/quota_manager.sh set alice 20
 sudo scripts/quota_manager.sh report
 ```
 
+`set` 命令默认同时更新 Linux quota 和 Go 管理后台记录。仅在后台维护或故障排查时使用：
+
+```bash
+sudo scripts/quota_manager.sh set alice 20 --no-backend
+```
+
 ## 7. 删除用户
 
 删除账号并归档用户数据：

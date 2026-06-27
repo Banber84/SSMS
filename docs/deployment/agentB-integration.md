@@ -16,7 +16,7 @@ sudo scripts/create_user.sh alice --quota-gb 10
 sudo scripts/quota_manager.sh set alice 20
 ```
 
-同步到管理后台：
+该命令成功修改 Linux quota 后会自动按用户名创建或更新后台记录。需要单独调试 API 时也可以手动调用：
 
 ```bash
 curl -X PUT http://192.168.1.187:8080/api/users/username/alice/quota \
@@ -76,6 +76,16 @@ sudo scripts/backend_sync.sh upsert-user alice 1
 sudo scripts/backend_sync.sh sync-usage --format-summary
 sudo scripts/backend_sync.sh delete-user alice
 ```
+
+`sync-usage` 只为后台已经登记的用户写入存储统计。升级前已经存在的
+Linux/Samba 用户，需要先执行一次：
+
+```bash
+sudo scripts/backend_sync.sh upsert-user USERNAME QUOTA_GB
+```
+
+如果扫描到尚未登记的用户，脚本会列出并跳过该用户，继续同步其他用户，
+最后输出成功和跳过数量。
 
 配置文件：
 

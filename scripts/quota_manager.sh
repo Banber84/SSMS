@@ -11,10 +11,11 @@ usage() {
   cat <<'EOF'
 用法：
   sudo scripts/quota_manager.sh enable
-  sudo scripts/quota_manager.sh set USERNAME QUOTA_GB
+  sudo scripts/quota_manager.sh set USERNAME QUOTA_GB [--no-backend]
   sudo scripts/quota_manager.sh report
 
 STORAGE_ROOT 所在文件系统必须使用 usrquota,grpquota 挂载参数。
+set 命令默认在修改 Linux 配额后同步 Go 管理后台。
 EOF
 }
 
@@ -50,7 +51,19 @@ EOF
   set)
     USERNAME="${2:-}"
     QUOTA_GB="${3:-}"
+    SYNC_BACKEND="1"
     if [[ -z "$USERNAME" || -z "$QUOTA_GB" ]]; then
+      usage
+      exit 1
+    fi
+    if [[ "${4:-}" == "--no-backend" ]]; then
+      SYNC_BACKEND="0"
+    elif [[ -n "${4:-}" ]]; then
+      echo "未知参数：$4"
+      usage
+      exit 1
+    fi
+    if [[ $# -gt 4 ]]; then
       usage
       exit 1
     fi
@@ -66,6 +79,13 @@ EOF
     SOFT=$((BLOCKS * 95 / 100))
     run_quota_cmd setquota -u "$USERNAME" "$SOFT" "$BLOCKS" 0 0 "$MOUNT_POINT"
     run_quota_cmd quota -u "$USERNAME" || true
+    if [[ "$SYNC_BACKEND" == "1" ]]; then
+      if "$SCRIPT_DIR/backend_sync.sh" health >/dev/null 2>&1; then
+        "$SCRIPT_DIR/backend_sync.sh" upsert-user "$USERNAME" "$QUOTA_GB"
+      else
+        echo "后台 API 不可用，Linux 配额已修改，已跳过后台同步。"
+      fi
+    fi
     ;;
   report)
     run_quota_cmd repquota "$MOUNT_POINT"

@@ -19,6 +19,7 @@ sudo scripts/create_user.sh alice --quota-gb 10
 sudo scripts/sync_user.sh alice --quota-gb 10
 sudo scripts/sync_delete_user.sh alice
 sudo scripts/quota_manager.sh set alice 20
+sudo scripts/quota_manager.sh set alice 20 --no-backend
 sudo scripts/quota_manager.sh report
 sudo scripts/storage_usage_report.sh --format json
 sudo scripts/delete_user.sh alice --keep-data
