@@ -22,51 +22,52 @@ sudo systemctl status ssh
 
 ```bash
 sudo scripts/install_storage_server.sh
-sudo scripts/quota_manager.sh enable
-sudo scripts/join_node.sh NodeC 192.168.1.215 nodec1
-sudo scripts/leave_node.sh NodeC --storage-user a2
-sudo scripts/deploy_smb_gateways.sh
-sudo scripts/create_user.sh alice --quota-gb 10
-sudo scripts/sync_user.sh alice --quota-gb 10
-sudo scripts/sync_delete_user.sh alice
-sudo scripts/quota_manager.sh set alice 20
-sudo scripts/quota_manager.sh set alice 20 --no-backend
-sudo scripts/quota_manager.sh report
-sudo scripts/storage_usage_report.sh --format json
-sudo scripts/backend_sync.sh sync-usage --format-summary
-sudo scripts/delete_user.sh alice --keep-data
-```
-
-对应的统一命令：
-
-```bash
+sudo ssmsctl quota enable
+# 原脚本：sudo scripts/quota_manager.sh enable
 sudo ssmsctl node join NodeC 192.168.1.215 nodec1
+# 原脚本：sudo scripts/join_node.sh NodeC 192.168.1.215 nodec1
 sudo ssmsctl node leave NodeC --storage-user a2
+# 原脚本：sudo scripts/leave_node.sh NodeC --storage-user a2
+sudo ssmsctl gateway deploy
+# 原脚本：sudo scripts/deploy_smb_gateways.sh
 sudo ssmsctl user create alice --quota-gb 10
+# 原脚本：sudo scripts/sync_user.sh alice --quota-gb 10
 sudo ssmsctl user delete alice
+# 原脚本：sudo scripts/sync_delete_user.sh alice
 sudo ssmsctl quota set alice 20
+# 原脚本：sudo scripts/quota_manager.sh set alice 20
+sudo ssmsctl quota set alice 20 --no-backend
+# 原脚本：sudo scripts/quota_manager.sh set alice 20 --no-backend
+sudo ssmsctl quota report
+# 原脚本：sudo scripts/quota_manager.sh report
 sudo ssmsctl usage sync
+# 原脚本：sudo scripts/backend_sync.sh sync-usage --format-summary
+sudo ssmsctl usage report --format json
+# 原脚本：sudo scripts/storage_usage_report.sh --format json
+sudo ssmsctl backend upsert-user alice 10
+# 原脚本：sudo scripts/backend_sync.sh upsert-user alice 10
+sudo ssmsctl backend delete-user alice
+# 原脚本：sudo scripts/backend_sync.sh delete-user alice
 ```
+
+底层脚本仍可用于排障，例如 `scripts/sync_user.sh`、`scripts/quota_manager.sh`、
+`scripts/backend_sync.sh`。
 
 ## 登录节点
 
 ```bash
 sudo scripts/install_node_client.sh
 sudo scripts/install_node_agent.sh --help
-sudo scripts/install_smb_gateway.sh --storage-server 192.168.1.187
+sudo ssmsctl gateway install --storage-server 192.168.1.187
+# 原脚本：sudo scripts/install_smb_gateway.sh --storage-server 192.168.1.187
 sudo scripts/create_node_user.sh alice
 su - alice
 mount | grep /home/alice/storage
 scripts/test_mount.sh alice
-scripts/request_user_sync.sh alice --quota-gb 10
-scripts/request_user_delete.sh alice
-```
-
-对应的统一命令：
-
-```bash
 ssmsctl user request-create alice --quota-gb 10
+# 原脚本：scripts/request_user_sync.sh alice --quota-gb 10
 ssmsctl user request-delete alice
+# 原脚本：scripts/request_user_delete.sh alice
 ssmsctl gateway status
 ```
 
@@ -92,6 +93,8 @@ quota -u alice
 ## 提供给管理后台的使用量报告
 
 ```bash
-sudo scripts/storage_usage_report.sh --format csv
-sudo scripts/storage_usage_report.sh --format json
+sudo ssmsctl usage report --format csv
+# 原脚本：sudo scripts/storage_usage_report.sh --format csv
+sudo ssmsctl usage report --format json
+# 原脚本：sudo scripts/storage_usage_report.sh --format json
 ```

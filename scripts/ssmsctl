@@ -17,7 +17,7 @@ usage() {
   quota     enable | set | report
   gateway   deploy | install | uninstall | status
   usage     sync | report
-  backend   health
+  backend   health | upsert-user | update-quota | delete-user | delete-server
   system    status | check
 
 常用示例：
@@ -89,6 +89,10 @@ EOF
       cat <<'EOF'
 管理后台：
   ssmsctl backend health
+  sudo ssmsctl backend upsert-user USERNAME QUOTA_GB
+  sudo ssmsctl backend update-quota USERNAME QUOTA_GB
+  sudo ssmsctl backend delete-user USERNAME
+  sudo ssmsctl backend delete-server NODE_NAME
 EOF
       ;;
     system)
@@ -366,6 +370,9 @@ case "$RESOURCE:$ACTION" in
   backend:health)
     [[ $# -eq 0 ]] || { echo "backend health 不接受额外参数。" >&2; exit 1; }
     run_script backend_sync.sh health
+    ;;
+  backend:upsert-user|backend:update-quota|backend:delete-user|backend:delete-server)
+    run_privileged_script backend_sync.sh "$ACTION" "$@"
     ;;
   system:status)
     [[ $# -eq 0 ]] || { echo "system status 不接受额外参数。" >&2; exit 1; }

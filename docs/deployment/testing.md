@@ -72,7 +72,8 @@ http://192.168.1.187:8080/logs
 
 ```bash
 sudo scripts/install_storage_server.sh
-sudo scripts/quota_manager.sh enable
+sudo ssmsctl quota enable
+# 原脚本：sudo scripts/quota_manager.sh enable
 sudo scripts/create_user.sh alice --quota-gb 1
 sudo scripts/create_user.sh bob --quota-gb 1
 ```
@@ -93,7 +94,8 @@ smbclient //localhost/bob -U alice -c 'ls'
 验证配额：
 
 ```bash
-sudo scripts/quota_manager.sh report
+sudo ssmsctl quota report
+# 原脚本：sudo scripts/quota_manager.sh report
 quota -u alice
 ```
 

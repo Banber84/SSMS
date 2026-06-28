@@ -131,6 +131,7 @@ sudo scripts/apply_site_config.sh --config configs/site.env --output-dir /etc/ss
 system.conf
 sync.conf
 nodes.conf
+backend.conf
 storage-server.env
 storage-agent.env
 ```

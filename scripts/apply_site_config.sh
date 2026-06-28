@@ -16,6 +16,7 @@ usage() {
     system.conf
     sync.conf
     nodes.conf
+    backend.conf
     storage-server.env
     storage-agent.env
 
@@ -107,6 +108,8 @@ SSMS_AGENT_ADDRESS="${SSMS_AGENT_ADDRESS:-}"
 SSMS_AGENT_DISK="${SSMS_AGENT_DISK:-/}"
 SSMS_AGENT_INTERVAL="${SSMS_AGENT_INTERVAL:-30s}"
 SSMS_SERVER_URL="${SSMS_SERVER_URL:-}"
+BACKEND_SYNC_ENABLED="${BACKEND_SYNC_ENABLED:-1}"
+BACKEND_API_TIMEOUT="${BACKEND_API_TIMEOUT:-5}"
 
 validation_failed=0
 require_value SSMS_MANAGEMENT_HOST "${SSMS_MANAGEMENT_HOST:-}" || validation_failed=1
@@ -189,6 +192,14 @@ write_header "$SYNC_CONF"
   write_kv DEFAULT_SYNC_QUOTA_GB "$DEFAULT_SYNC_QUOTA_GB"
 } >> "$SYNC_CONF"
 
+BACKEND_CONF="$OUTPUT_DIR/backend.conf"
+write_header "$BACKEND_CONF"
+{
+  write_kv BACKEND_API_BASE "$SSMS_MANAGEMENT_URL"
+  write_kv BACKEND_SYNC_ENABLED "$BACKEND_SYNC_ENABLED"
+  write_kv BACKEND_API_TIMEOUT "$BACKEND_API_TIMEOUT"
+} >> "$BACKEND_CONF"
+
 SERVER_ENV="$OUTPUT_DIR/storage-server.env"
 write_header "$SERVER_ENV"
 {
@@ -227,6 +238,7 @@ cat <<EOF
   $SYSTEM_CONF
   $SYNC_CONF
   $NODES_CONF
+  $BACKEND_CONF
   $SERVER_ENV
   $AGENT_ENV
 EOF

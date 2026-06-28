@@ -13,7 +13,8 @@ sudo scripts/create_user.sh alice --quota-gb 10
 修改用户配额：
 
 ```bash
-sudo scripts/quota_manager.sh set alice 20
+sudo ssmsctl quota set alice 20
+# 原脚本：sudo scripts/quota_manager.sh set alice 20
 ```
 
 该命令成功修改 Linux quota 后会自动按用户名创建或更新后台记录。需要单独调试 API 时也可以手动调用：
@@ -35,13 +36,15 @@ sudo scripts/delete_user.sh alice --keep-data
 输出 CSV：
 
 ```bash
-sudo scripts/storage_usage_report.sh --format csv
+sudo ssmsctl usage report --format csv
+# 原脚本：sudo scripts/storage_usage_report.sh --format csv
 ```
 
 输出 JSON：
 
 ```bash
-sudo scripts/storage_usage_report.sh --format json
+sudo ssmsctl usage report --format json
+# 原脚本：sudo scripts/storage_usage_report.sh --format json
 ```
 
 JSON 示例：
@@ -71,17 +74,22 @@ used_bytes = used_kb * 1024
 项目提供统一的后台同步脚本：
 
 ```bash
-scripts/backend_sync.sh health
-sudo scripts/backend_sync.sh upsert-user alice 1
-sudo scripts/backend_sync.sh sync-usage --format-summary
-sudo scripts/backend_sync.sh delete-user alice
+ssmsctl backend health
+# 原脚本：scripts/backend_sync.sh health
+sudo ssmsctl backend upsert-user alice 1
+# 原脚本：sudo scripts/backend_sync.sh upsert-user alice 1
+sudo ssmsctl usage sync
+# 原脚本：sudo scripts/backend_sync.sh sync-usage --format-summary
+sudo ssmsctl backend delete-user alice
+# 原脚本：sudo scripts/backend_sync.sh delete-user alice
 ```
 
 `sync-usage` 只为后台已经登记的用户写入存储统计。升级前已经存在的
 Linux/Samba 用户，需要先执行一次：
 
 ```bash
-sudo scripts/backend_sync.sh upsert-user USERNAME QUOTA_GB
+sudo ssmsctl backend upsert-user USERNAME QUOTA_GB
+# 原脚本：sudo scripts/backend_sync.sh upsert-user USERNAME QUOTA_GB
 ```
 
 如果扫描到尚未登记的用户，脚本会列出并跳过该用户，继续同步其他用户，
@@ -102,24 +110,29 @@ BACKEND_SYNC_ENABLED="1"
 BACKEND_API_TIMEOUT="5"
 ```
 
-`sync_user.sh` 创建或更新系统用户成功后，会自动调用：
+`sync_user.sh` 创建或更新系统用户成功后，会自动同步后台，效果等价于：
 
 ```bash
-scripts/backend_sync.sh upsert-user USERNAME QUOTA_GB
-scripts/backend_sync.sh sync-usage --format-summary
+sudo ssmsctl backend upsert-user USERNAME QUOTA_GB
+# 原脚本：scripts/backend_sync.sh upsert-user USERNAME QUOTA_GB
+sudo ssmsctl usage sync
+# 原脚本：scripts/backend_sync.sh sync-usage --format-summary
 ```
 
-`sync_delete_user.sh` 删除系统用户成功后，会自动调用：
+`sync_delete_user.sh` 删除系统用户成功后，会自动同步后台，效果等价于：
 
 ```bash
-scripts/backend_sync.sh delete-user USERNAME
+sudo ssmsctl backend delete-user USERNAME
+# 原脚本：scripts/backend_sync.sh delete-user USERNAME
 ```
 
 如果临时不想同步后台，可以使用：
 
 ```bash
-sudo scripts/sync_user.sh alice --quota-gb 1 --no-backend
-sudo scripts/sync_delete_user.sh alice --no-backend
+sudo ssmsctl user create alice --quota-gb 1 --no-backend
+# 原脚本：sudo scripts/sync_user.sh alice --quota-gb 1 --no-backend
+sudo ssmsctl user delete alice --no-backend
+# 原脚本：sudo scripts/sync_delete_user.sh alice --no-backend
 ```
 
 ## 节点约定
@@ -129,7 +142,8 @@ sudo scripts/sync_delete_user.sh alice --no-backend
 如果需要同时在 Storage Server、NodeA、NodeB 创建同名用户，推荐在 Storage Server 上执行：
 
 ```bash
-sudo scripts/sync_user.sh alice --quota-gb 1
+sudo ssmsctl user create alice --quota-gb 1
+# 原脚本：sudo scripts/sync_user.sh alice --quota-gb 1
 ```
 
 该脚本会调用 A 部分的系统脚本完成三方用户同步。同步完成后，agentB 仍然只需要通过 REST API 写入用户记录、配额记录和存储统计，不需要直接执行 Linux/Samba 命令。
@@ -137,7 +151,8 @@ sudo scripts/sync_user.sh alice --quota-gb 1
 如果创建入口在 NodeA 或 NodeB，可以执行：
 
 ```bash
-scripts/request_user_sync.sh alice --quota-gb 1
+ssmsctl user request-create alice --quota-gb 1
+# 原脚本：scripts/request_user_sync.sh alice --quota-gb 1
 ```
 
 该脚本会通过 SSH 请求 Storage Server 执行 `sync_user.sh`，最终仍由 Storage Server 统一同步三方用户状态。
@@ -145,13 +160,15 @@ scripts/request_user_sync.sh alice --quota-gb 1
 如果需要同步删除三方用户，可以在 Storage Server 上执行：
 
 ```bash
-sudo scripts/sync_delete_user.sh alice
+sudo ssmsctl user delete alice
+# 原脚本：sudo scripts/sync_delete_user.sh alice
 ```
 
 也可以从 NodeA 或 NodeB 发起删除请求：
 
 ```bash
-scripts/request_user_delete.sh alice
+ssmsctl user request-delete alice
+# 原脚本：scripts/request_user_delete.sh alice
 ```
 
 删除同步会优先处理 Linux/Samba 系统用户和目录归档；如果后台 API 可用，`sync_delete_user.sh` 会同步删除 agentB 后台数据库中的用户记录。如果后台 API 不可用，脚本会跳过后台同步，系统用户删除不受影响。

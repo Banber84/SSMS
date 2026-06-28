@@ -27,6 +27,7 @@ done
 "$PROJECT_ROOT/scripts/ssmsctl" quota --help >/dev/null
 "$PROJECT_ROOT/scripts/ssmsctl" gateway --help >/dev/null
 "$PROJECT_ROOT/scripts/ssmsctl" usage --help >/dev/null
+"$PROJECT_ROOT/scripts/ssmsctl" backend --help >/dev/null
 "$PROJECT_ROOT/scripts/ssmsctl" system --help >/dev/null
 
 echo "检查后台 API 路径。"
@@ -66,6 +67,39 @@ grep -qF 'NodeA 192.168.1.122 nodea1' "$tmp_dir/site.env"
 grep -qF 'nodeC 192.168.1.215 nodec1' "$tmp_dir/site.env"
 [[ "$(grep -c '^SSMS_NODES=' "$tmp_dir/site.env")" -eq 1 ]]
 bash -n "$tmp_dir/site.env"
+
+cat > "$tmp_dir/site-valid.env" <<'EOF'
+SSMS_MANAGEMENT_HOST="192.168.1.187"
+SSMS_MANAGEMENT_PORT="8080"
+SSMS_MANAGEMENT_URL=""
+BACKEND_SYNC_ENABLED="1"
+BACKEND_API_TIMEOUT="5"
+SSMS_SERVER_ADDR="0.0.0.0:${SSMS_MANAGEMENT_PORT}"
+SSMS_DB_PATH="/var/lib/ssms/server-storage.db"
+GIN_MODE="release"
+STORAGE_SERVER="192.168.1.187"
+STORAGE_ROOT="/srv/samba/users"
+STORAGE_GROUP="storageusers"
+DEFAULT_QUOTA_GB="10"
+MOUNT_POINT_NAME="storage"
+SMB_WORKGROUP="WORKGROUP"
+SMB_NETBIOS_NAME="SSMS-STORAGE"
+STORAGE_SYNC_HOST="192.168.1.187"
+STORAGE_SYNC_USER="a2"
+STORAGE_SYNC_PROJECT_DIR="/home/a2/ServerStorageManagementSystem"
+DEFAULT_SYNC_QUOTA_GB="1"
+SSMS_AGENT_NAME="NodeA"
+SSMS_AGENT_ADDRESS="192.168.1.188"
+SSMS_AGENT_DISK="/"
+SSMS_AGENT_INTERVAL="30s"
+SSMS_NODES="
+NodeA 192.168.1.188 nodea1 /home/nodea1/ServerStorageManagementSystem
+"
+EOF
+"$PROJECT_ROOT/scripts/apply_site_config.sh" --config "$tmp_dir/site-valid.env" --output-dir "$tmp_dir/generated" >/dev/null
+grep -qF 'BACKEND_API_BASE=http://192.168.1.187:8080' "$tmp_dir/generated/backend.conf"
+grep -qF 'BACKEND_SYNC_ENABLED=1' "$tmp_dir/generated/backend.conf"
+grep -qF 'BACKEND_API_TIMEOUT=5' "$tmp_dir/generated/backend.conf"
 
 if command -v go >/dev/null 2>&1; then
   echo "运行 Go 测试。"

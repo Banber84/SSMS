@@ -81,7 +81,8 @@ UUID=xxxx-xxxx / ext4 errors=remount-ro,usrquota,grpquota 0 1
 
 ```bash
 sudo mount -o remount /
-sudo scripts/quota_manager.sh enable
+sudo ssmsctl quota enable
+# 原脚本：sudo scripts/quota_manager.sh enable
 ```
 
 Ubuntu 26.04 的 ext4 quota 命令可能提示 external quota files 已废弃。这是兼容性警告，不影响课程测试中的用户配额功能。只要看到类似以下输出，即表示用户 quota 已启用：
@@ -94,7 +95,8 @@ Ubuntu 26.04 的 ext4 quota 命令可能提示 external quota files 已废弃。
 
 ```bash
 sudo mount -o remount /srv/samba
-sudo scripts/quota_manager.sh enable
+sudo ssmsctl quota enable
+# 原脚本：sudo scripts/quota_manager.sh enable
 ```
 
 ## 5. 创建存储用户
@@ -116,14 +118,17 @@ Samba 用户：alice
 ## 6. 修改配额
 
 ```bash
-sudo scripts/quota_manager.sh set alice 20
-sudo scripts/quota_manager.sh report
+sudo ssmsctl quota set alice 20
+# 原脚本：sudo scripts/quota_manager.sh set alice 20
+sudo ssmsctl quota report
+# 原脚本：sudo scripts/quota_manager.sh report
 ```
 
 `set` 命令默认同时更新 Linux quota 和 Go 管理后台记录。仅在后台维护或故障排查时使用：
 
 ```bash
-sudo scripts/quota_manager.sh set alice 20 --no-backend
+sudo ssmsctl quota set alice 20 --no-backend
+# 原脚本：sudo scripts/quota_manager.sh set alice 20 --no-backend
 ```
 
 ## 7. 删除用户

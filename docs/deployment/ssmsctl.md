@@ -94,9 +94,16 @@ ssmsctl gateway status NodeC
 
 ```bash
 ssmsctl backend health
+sudo ssmsctl backend upsert-user alice 10
+sudo ssmsctl backend update-quota alice 20
+sudo ssmsctl backend delete-user alice
+sudo ssmsctl backend delete-server NodeC
 ssmsctl system status
 ssmsctl system check
 ```
+
+`backend` 分组只同步 Go 管理后台数据库，不创建或删除 Linux/Samba 系统用户。
+完整用户生命周期仍优先使用 `ssmsctl user create/delete`。
 
 `system status` 汇总本机管理后台、用量定时器、Agent 和 Gateway 的 systemd
 状态。`system check` 执行项目 Shell、配置和 Go 测试。

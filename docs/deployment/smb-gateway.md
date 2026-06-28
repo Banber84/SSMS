@@ -25,20 +25,23 @@ Windows 资源管理器或 macOS 可以连接任意登录节点 IP，并访问 S
 在 Storage Server 上执行：
 
 ```bash
-sudo scripts/deploy_smb_gateways.sh
+sudo ssmsctl gateway deploy
+# 原脚本：sudo scripts/deploy_smb_gateways.sh
 ```
 
 脚本读取 `/etc/ssms/nodes.conf`，依次为 NodeA、NodeB、NodeC 安装网关。
 首次测试时可以只部署 NodeC：
 
 ```bash
-sudo scripts/deploy_smb_gateways.sh --node NodeC
+sudo ssmsctl gateway deploy --node NodeC
+# 原脚本：sudo scripts/deploy_smb_gateways.sh --node NodeC
 ```
 
 新节点通过 `join_node.sh` 接入时会默认安装；需要跳过时使用：
 
 ```bash
-sudo scripts/join_node.sh NodeC 192.168.1.215 nodec1 --skip-smb-gateway
+sudo ssmsctl node join NodeC 192.168.1.215 nodec1 --skip-smb-gateway
+# 原脚本：sudo scripts/join_node.sh NodeC 192.168.1.215 nodec1 --skip-smb-gateway
 ```
 
 即使使用 `--skip-copy`，接入脚本仍会单独复制 Gateway 安装脚本和 systemd
@@ -50,7 +53,8 @@ TCP 445 正在监听且转发目标为当前 Storage Server。
 在登录节点执行：
 
 ```bash
-sudo scripts/install_smb_gateway.sh --storage-server 192.168.1.187
+sudo ssmsctl gateway install --storage-server 192.168.1.187
+# 原脚本：sudo scripts/install_smb_gateway.sh --storage-server 192.168.1.187
 ```
 
 检查：
@@ -83,7 +87,8 @@ smb://192.168.1.215/alice
 在节点执行：
 
 ```bash
-sudo scripts/install_smb_gateway.sh --uninstall
+sudo ssmsctl gateway uninstall
+# 原脚本：sudo scripts/install_smb_gateway.sh --uninstall
 ```
 
 `leave_node.sh` 会自动卸载该节点网关。
@@ -93,7 +98,8 @@ sudo scripts/install_smb_gateway.sh --uninstall
 所有命令均在 Storage Server 上执行。先让 NodeC 离开：
 
 ```bash
-sudo scripts/leave_node.sh NodeC --storage-user a2
+sudo ssmsctl node leave NodeC --storage-user a2
+# 原脚本：sudo scripts/leave_node.sh NodeC --storage-user a2
 ```
 
 脚本会先在 NodeC 停止并卸载 Gateway，确认 socket、service 和 systemd unit
@@ -111,10 +117,14 @@ ssh nodec1@192.168.1.215 \
 重新接入 NodeC：
 
 ```bash
-sudo scripts/join_node.sh NodeC 192.168.1.215 nodec1 \
+sudo ssmsctl node join NodeC 192.168.1.215 nodec1 \
   --storage-user a2 \
   --storage-host 192.168.1.187 \
   --storage-project /home/a2/ServerStorageManagementSystem
+# 原脚本：sudo scripts/join_node.sh NodeC 192.168.1.215 nodec1 \
+#   --storage-user a2 \
+#   --storage-host 192.168.1.187 \
+#   --storage-project /home/a2/ServerStorageManagementSystem
 ```
 
 确认重新加入结果：
