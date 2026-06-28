@@ -204,15 +204,45 @@ PUT /api/users/username/alice/quota
 
 ## 日志管理
 
-### `GET /api/logs?limit=100`
+### `GET /api/logs`
 
-查询最近日志。
+查询日志。支持按最近时间倒序返回，也支持和日志页面一致的筛选条件。
 
-后台页面使用的日志类型包括：
+查询参数：
 
-- `login`：用户登录日志
-- `mount`：挂载日志
-- `system`：系统日志
+| 参数 | 说明 |
+| --- | --- |
+| `limit` | 返回数量，默认 `100`，最大 `200` |
+| `level` | 日志级别，可选 `INFO`、`WARN`、`ERROR` |
+| `type` | 日志类型，如 `login`、`sync`、`storage`、`system` |
+| `keyword` | 在时间、类型、用户、节点和内容中做关键字匹配 |
+| `key_only` | 设为 `1`、`true`、`on` 或 `yes` 时只返回 `WARN` / `ERROR` |
+
+请求示例：
+
+```text
+GET /api/logs?level=ERROR&type=sync&limit=50
+GET /api/logs?key_only=1&keyword=quota
+```
+
+当前日志类型包括：
+
+- `login`
+- `mount`
+- `sync`
+- `storage`
+- `quota`
+- `user`
+- `agent`
+- `system`
+- `warning`
+- `error`
+
+日志级别由后台根据类型和内容推导：
+
+- 包含 `error`、`fail`、`failed`、`denied` 时为 `ERROR`。
+- 包含 `warning`、`warn`、`offline`、`exceeded` 时为 `WARN`。
+- 其他日志为 `INFO`。
 
 ### `POST /api/logs`
 

@@ -1,50 +1,16 @@
 # Server Storage Management System
 
-基于 Linux、Samba 和 Go 实现的共享存储管控系统。
+基于 Linux、Samba、Go 和 SQLite 的共享存储管控系统。系统面向多用户、多节点场景，用户可在任意登录节点访问自己的集中存储目录，管理员可通过 Web 后台查看用户、配额、用量、节点状态和日志。
 
-## 项目简介
+## 核心能力
 
-本项目旨在构建一个面向多用户、多服务器环境的共享存储管控平台。用户可以登录任意服务器节点访问自己的数据，实现数据集中存储和跨节点共享，同时保证用户之间的数据隔离和存储配额管理。
-
-系统采用 Samba 作为共享存储服务，通过 Linux 用户权限机制实现访问控制，并提供 Web 管理后台用于查看服务器状态、用户存储配额以及空间使用情况。
-
----
-
-## 功能特性
-
-### 用户数据隔离
-
-- 每个用户拥有独立存储目录
-- 用户仅能访问自己的文件
-- 禁止访问其他用户数据
-
-### 跨服务器数据访问
-
-- 支持多个服务器节点
-- 用户登录任意节点均可访问相同数据
-- 数据集中存储，避免文件分散
-- Windows/macOS 可通过任意节点的 SMB 网关访问中心共享
-
-### 自动挂载
-
-- 用户登录后自动挂载个人共享目录
-- 无需手动连接共享存储
-
-### 存储空间管理
-
-- 为用户分配最大可用空间
-- 统计用户已使用空间
-- 支持存储使用情况查询
-
-### 管理后台
-
-- 用户管理
-- 配额管理
-- 存储空间统计
-- 服务器状态监控
-- 日志查看
-
----
+- 用户隔离：每个用户拥有独立目录，目录权限和 Samba 访问控制共同隔离数据。
+- 集中存储：用户数据集中保存在 Storage Server，登录节点通过 SMB/CIFS 访问。
+- 自动挂载：登录节点通过 `pam_mount` 自动挂载用户个人共享目录。
+- 配额管理：使用 Linux quota 限制用户存储空间，并同步到管理后台。
+- 节点监控：Agent 定时上报 CPU、内存、磁盘和在线状态。
+- 管理后台：提供用户管理、配额修改、存储统计、节点监控和日志筛选。
+- 统一命令：`ssmsctl` 封装常用用户、节点、配额、Gateway 和系统检查操作。
 
 ## 系统架构
 
@@ -78,237 +44,89 @@ flowchart TB
     Management --> DB
 ```
 
-### 节点说明
+## 组件说明
 
-#### Storage Server
+| 组件 | 作用 |
+| --- | --- |
+| Storage Server | 保存用户目录，提供 Samba 共享，执行 Linux quota，也可作为登录节点 |
+| Login Node | 提供用户登录入口，通过 `pam_mount` 挂载中心存储 |
+| SMB Gateway | 让 Windows/macOS 通过任意节点访问中心共享 |
+| Web Management | Go + Gin 管理后台，提供页面和 REST API |
+| Agent | 节点状态采集进程，通过 systemd 常驻运行 |
+| SQLite | 保存后台管理数据、节点状态、存储统计和日志 |
 
-负责：
+## 快速启动
 
-- Samba 共享存储
-- 用户目录管理
-- 权限控制
-- 存储空间管理
-- 也可以作为登录节点，供用户直接登录并访问个人共享目录
+开发运行：
 
-#### NodeA / NodeB
+```bash
+go run ./server -addr 0.0.0.0:8080 -db server-storage.db
+```
 
-负责：
+访问：
 
-- 用户登录
-- 自动挂载共享目录
-- 访问共享存储
+```text
+http://服务器IP:8080
+```
 
-#### Web Management
+生产或演示环境建议使用安装脚本生成 systemd 服务：
 
-负责：
+```bash
+sudo scripts/install_management_server.sh
+sudo systemctl status storage-server
+```
 
-- 用户管理
-- 配额管理
-- 空间统计
-- 状态监控
-- 日志管理
+节点 Agent 从项目根目录构建：
 
----
+```bash
+go build -o bin/storage-agent ./agent
+```
 
-## 技术栈
+详细部署步骤见 [docs/design/runbook.md](docs/design/runbook.md) 和 [docs/deployment/README.md](docs/deployment/README.md)。
 
-### 服务端
+## 统一命令
 
-- Go
-- Gin
-- SQLite
+安装脚本会把 `ssmsctl` 放到 `/usr/local/bin/ssmsctl`：
 
-### 存储服务
+```bash
+ssmsctl --help
+ssmsctl system status
+sudo ssmsctl user create alice --quota-gb 10
+sudo ssmsctl quota set alice 20
+sudo ssmsctl node join NodeC 192.168.1.215 nodec1
+sudo ssmsctl usage sync
+```
 
-- Samba (SMB)
+完整说明见 [docs/deployment/ssmsctl.md](docs/deployment/ssmsctl.md)。
 
-### 系统平台
+## 常用文档
 
-- Linux
-- Ubuntu Server
-
-### 系统管理
-
-- systemd
-- Bash Script
-
-### 状态采集
-
-- gopsutil
-
----
+- [运行手册](docs/design/runbook.md)：后端、Agent、systemd、接口测试和故障排查。
+- [API 文档](docs/design/api.md)：REST API 路径、请求和响应。
+- [数据库设计](docs/design/database.md)：SQLite 表结构。
+- [部署文档索引](docs/deployment/README.md)：部署、联调、命令和测试报告入口。
+- [Agent 说明](agent/README.md)：Agent 构建、安装和 systemd 配置。
 
 ## 项目结构
 
 ```text
-ServerStorageManagementSystem/
-├── server/
-│   ├── api/
-│   ├── database/
-│   ├── models/
-│   ├── service/
-│   ├── templates/
-│   └── main.go
-├── agent/
-│   ├── README.md
-│   ├── main.go
-│   └── storage-agent.service
-├── scripts/
-│   ├── create_node_user.sh
-│   ├── create_user.sh
-│   ├── delete_node_user.sh
-│   ├── delete_user.sh
-│   ├── apply_site_config.sh
-│   ├── install_management_server.sh
-│   ├── install_node_agent.sh
-│   ├── install_node_client.sh
-│   ├── install_smb_gateway.sh
-│   ├── install_storage_agent.sh
-│   ├── install_storage_server.sh
-│   ├── deploy_smb_gateways.sh
-│   ├── join_node.sh
-│   ├── leave_node.sh
-│   ├── quota_manager.sh
-│   ├── request_user_delete.sh
-│   ├── request_user_sync.sh
-│   ├── storage_usage_report.sh
-│   ├── ssmsctl
-│   ├── sync_delete_user.sh
-│   ├── sync_user.sh
-│   ├── test_mount.sh
-│   └── uninstall_management_server.sh
-├── configs/
-│   ├── nodes.conf
-│   ├── pam_mount.conf.xml
-│   ├── site.env.example
-│   ├── smb.conf
-│   ├── storage-agent.env.example
-│   ├── storage-agent.service
-│   ├── storage-server.env.example
-│   ├── storage-server.service
-│   ├── sync.conf
-│   └── system.conf
-├── docs/
-│   ├── deployment/
-│   └── design/
-├── go.mod
-├── go.sum
-├── README.md
-└── LICENSE
+server/      Go 管理后台、页面、REST API 和 SQLite 访问
+agent/       节点状态采集 Agent
+scripts/     安装、用户同步、配额、节点和 Gateway 脚本
+configs/     systemd、Samba、pam_mount 和站点配置模板
+docs/design/ 设计文档、API、数据库和运行手册
+docs/deployment/ 部署说明、命令参考和测试报告
 ```
 
-统一运维入口：
+## 技术栈
 
-```bash
-ssmsctl --help
-sudo ssmsctl user create alice --quota-gb 10
-sudo ssmsctl node join NodeC 192.168.1.215 nodec1
-```
-
-完整命令说明见 `docs/deployment/ssmsctl.md`。
-
----
-
-## 开发计划
-
-### 第一阶段：基础环境搭建
-
-- Ubuntu Server 部署
-- Samba 共享存储搭建
-- 用户目录创建
-- 权限控制配置
-
-### 第二阶段：存储服务实现
-
-- 自动挂载脚本
-- 用户管理脚本
-- 配额管理实现
-- 跨节点访问测试
-
-### 第三阶段：管理后台开发
-
-- 数据库设计
-- 用户管理模块
-- 配额管理模块
-- 存储统计模块
-
-### 第四阶段：监控与测试
-
-- 节点状态监控
-- 日志管理
-- 功能测试
-- 系统联调
-
----
-
-## 团队分工
-
-### 成员 A：系统与存储
-
-负责：
-
-- Linux 服务器部署
-- Samba 共享存储配置
-- 用户管理与权限控制
-- 用户目录自动创建
-- 自动挂载脚本开发
-- 存储配额管理
-- 测试环境搭建与维护
-
-负责目录：
-
-```text
-configs/
-scripts/
-docs/deployment/
-```
-
-### 成员 B：平台与后台
-
-负责：
-
-- Go Web 后台开发
-- SQLite 数据库设计
-- 用户管理模块
-- 配额管理模块
-- 存储使用统计模块
-- 节点状态监控模块
-- 日志管理模块
-- 前端管理页面开发
-
-负责目录：
-
-```text
-server/
-agent/
-docs/design/
-```
-
----
-
-## 运行环境
-
-### Storage Server
-
-- Ubuntu Server 26.04 LTS
-- Samba 4.x
-
-### Node Server
-
-- Ubuntu Server 26.04 LTS
-
-### Management Server
-
-- Go 1.24+
-- SQLite 3.x
-
----
-
-## 项目目标
-
-实现一个支持多用户、多服务器节点的共享存储管控系统，使用户能够在任意服务器节点访问自己的数据，并通过统一管理后台实现用户管理、权限控制、存储配额管理和系统监控。
-
----
+- Go / Gin
+- SQLite
+- Samba / SMB / CIFS
+- Linux quota
+- systemd
+- Bash
+- gopsutil
 
 ## License
 
