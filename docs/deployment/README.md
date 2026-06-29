@@ -35,6 +35,7 @@
 | [storage-server-test-report.md](storage-server-test-report.md) | Storage Server 单机测试记录 |
 | [full-integration-test-report.md](full-integration-test-report.md) | NodeA / NodeB 联调记录 |
 | [nodec-integration-test-report.md](nodec-integration-test-report.md) | NodeC 接入和回归记录 |
+| [bootstrap-storage-server-test-report.md](bootstrap-storage-server-test-report.md) | 新 Storage Server 自动部署实测 |
 
 ## 维护原则
 

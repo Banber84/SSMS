@@ -12,6 +12,7 @@ usage() {
   cat <<'EOF'
 用法：
   scripts/backend_sync.sh health
+  scripts/backend_sync.sh list-users [--format table|json]
   scripts/backend_sync.sh upsert-user USERNAME QUOTA_GB
   scripts/backend_sync.sh update-quota USERNAME QUOTA_GB
   scripts/backend_sync.sh sync-usage [--format-summary]
@@ -78,6 +79,81 @@ quota_gb_to_bytes() {
     exit 1
   fi
   printf '%s\n' $((quota_gb * 1024 * 1024 * 1024))
+}
+
+list_users() {
+  local format="table"
+  local payload
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --format)
+        format="${2:-}"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        return
+        ;;
+      *)
+        echo "未知参数：$1" >&2
+        usage >&2
+        exit 1
+        ;;
+    esac
+  done
+  if [[ "$format" != "table" && "$format" != "json" ]]; then
+    echo "格式必须是 table 或 json。" >&2
+    exit 1
+  fi
+
+  payload="$(curl_api "$API_BASE/api/users")"
+  if [[ "$format" == "json" ]]; then
+    printf '%s\n' "$payload"
+    return
+  fi
+
+  require_cmd python3
+  printf '%s' "$payload" | python3 -c '
+import json
+import sys
+import unicodedata
+
+users = json.load(sys.stdin) or []
+
+def clean(value):
+    return str(value or "").replace("\t", " ").replace("\n", " ")
+
+def display_width(value):
+    return sum(
+        2 if unicodedata.east_asian_width(char) in ("W", "F", "A") else 1
+        for char in value
+    )
+
+def pad(value, width):
+    return value + " " * (width - display_width(value))
+
+headers = ["ID", "USERNAME", "FULL_NAME", "EMAIL", "QUOTA_GB", "UPDATED_AT"]
+rows = []
+for user in users:
+    quota_gb = int(user.get("quota_bytes", 0)) / (1024 ** 3)
+    rows.append([
+        clean(user.get("id")),
+        clean(user.get("username")),
+        clean(user.get("full_name")),
+        clean(user.get("email")),
+        f"{quota_gb:.2f}",
+        clean(user.get("updated_at")),
+    ])
+
+widths = [
+    max([display_width(headers[index])] + [display_width(row[index]) for row in rows])
+    for index in range(len(headers))
+]
+print("  ".join(pad(header, widths[index]) for index, header in enumerate(headers)))
+for row in rows:
+    print("  ".join(pad(value, widths[index]) for index, value in enumerate(row)))
+'
 }
 
 username_valid() {
@@ -250,6 +326,9 @@ case "$COMMAND" in
   health)
     curl_api "$API_BASE/api/health"
     echo
+    ;;
+  list-users)
+    list_users "$@"
     ;;
   upsert-user)
     if [[ $# -ne 2 ]]; then

@@ -34,6 +34,8 @@ done
 echo "检查后台 API 路径。"
 grep -qF '/api/users/username/$username/quota' "$PROJECT_ROOT/scripts/backend_sync.sh"
 grep -qF '/api/storage/username' "$PROJECT_ROOT/scripts/backend_sync.sh"
+grep -qF 'list-users)' "$PROJECT_ROOT/scripts/backend_sync.sh"
+grep -qF 'user:list)' "$PROJECT_ROOT/scripts/ssmsctl"
 if grep -qE '/api/users/\$username/quota|/api/storage/by-username' "$PROJECT_ROOT/scripts/backend_sync.sh"; then
   echo "发现已废弃的后台 API 路径。" >&2
   exit 1
@@ -51,6 +53,10 @@ grep -qF 'systemctl restart storage-usage-sync.timer' "$PROJECT_ROOT/scripts/ins
 grep -qF 'systemctl restart storage-agent' "$PROJECT_ROOT/scripts/install_storage_agent.sh"
 grep -qF 'system:bootstrap' "$PROJECT_ROOT/scripts/ssmsctl"
 grep -qF 'configure_quota_mount' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
+grep -qF 'BACKEND_CONFIG_FILE=/etc/ssms/backend.conf' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
+grep -qF 'BOOTSTRAP_MODE=1' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
+grep -qF 'quota_is_active' "$PROJECT_ROOT/scripts/quota_manager.sh"
+grep -qF '"$CONFIG_FILE" -ef /etc/ssms/system.conf' "$PROJECT_ROOT/scripts/install_storage_server.sh"
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_node_client.sh"
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_storage_server.sh"
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_management_server.sh"

@@ -13,7 +13,7 @@ usage() {
 
 资源与操作：
   node      join | leave | list
-  user      create | delete | request-create | request-delete
+  user      list | create | delete | request-create | request-delete
   quota     enable | set | report
   gateway   deploy | install | uninstall | status
   usage     sync | report
@@ -26,6 +26,7 @@ usage() {
   ssmsctl node list
   sudo ssmsctl user create alice --quota-gb 10
   sudo ssmsctl user delete alice
+  ssmsctl user list
   ssmsctl user request-create alice --quota-gb 10
   sudo ssmsctl quota set alice 20
   sudo ssmsctl gateway deploy --node NodeC
@@ -52,6 +53,7 @@ EOF
     user)
       cat <<'EOF'
 用户管理：
+  ssmsctl user list [--format table|json]
   sudo ssmsctl user create USERNAME [--quota-gb GB] [sync_user.sh 选项]
   sudo ssmsctl user delete USERNAME [sync_delete_user.sh 选项]
   ssmsctl user request-create USERNAME [--quota-gb GB]
@@ -327,6 +329,9 @@ case "$RESOURCE:$ACTION" in
   node:list)
     [[ $# -eq 0 ]] || { echo "node list 不接受额外参数。" >&2; exit 1; }
     list_nodes
+    ;;
+  user:list)
+    run_script backend_sync.sh list-users "$@"
     ;;
   user:create)
     run_privileged_script sync_user.sh "$@"

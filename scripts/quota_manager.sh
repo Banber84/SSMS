@@ -34,6 +34,16 @@ run_quota_cmd() {
   "$@" 2> >(grep -v 'Cannot stat() mounted device tmpfs' >&2)
 }
 
+quota_is_active() {
+  local options state
+  options="$(findmnt -no OPTIONS --target "$STORAGE_ROOT")"
+  if [[ ",$options," == *,quota,* ]]; then
+    return 0
+  fi
+  state="$(quotaon -p "$MOUNT_POINT" 2>/dev/null || true)"
+  grep -Eqi 'user quota.*(is on|enabled)' <<< "$state"
+}
+
 case "$COMMAND" in
   enable)
     if ! findmnt -no OPTIONS --target "$STORAGE_ROOT" | grep -Eq '(^|,)usrquota(,|$)'; then
@@ -43,6 +53,11 @@ case "$COMMAND" in
   sudo mount -o remount $MOUNT_POINT
 EOF
       exit 1
+    fi
+    if quota_is_active; then
+      echo "$MOUNT_POINT 的用户 quota 已启用，跳过重复 quotacheck。"
+      run_quota_cmd repquota "$MOUNT_POINT"
+      exit 0
     fi
     run_quota_cmd quotacheck -cum "$MOUNT_POINT"
     run_quota_cmd quotaon -uv "$MOUNT_POINT"

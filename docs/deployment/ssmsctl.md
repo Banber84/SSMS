@@ -46,6 +46,8 @@ ssmsctl node list
 Storage Server 创建或删除用户并同步全部节点：
 
 ```bash
+ssmsctl user list
+ssmsctl user list --format json
 sudo ssmsctl user create alice --quota-gb 10
 sudo ssmsctl user delete alice
 ```

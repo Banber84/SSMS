@@ -38,6 +38,7 @@ sudo ssmsctl node leave NodeC --storage-user a2
 # 原脚本：sudo scripts/leave_node.sh NodeC --storage-user a2
 sudo ssmsctl gateway deploy
 # 原脚本：sudo scripts/deploy_smb_gateways.sh
+ssmsctl user list
 sudo ssmsctl user create alice --quota-gb 10
 # 原脚本：sudo scripts/sync_user.sh alice --quota-gb 10
 sudo ssmsctl user delete alice

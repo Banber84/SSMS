@@ -243,7 +243,8 @@ install_build_dependencies() {
     build-essential \
     ca-certificates \
     curl \
-    golang-go
+    golang-go \
+    python3
   command -v go >/dev/null 2>&1
   command -v gcc >/dev/null 2>&1
 }
@@ -308,7 +309,8 @@ configure_quota_mount() {
     echo "quota 挂载参数未生效：$mount_options" >&2
     exit 1
   fi
-  if quotaon -p "$mount_point" 2>/dev/null | grep -Eq 'user quota.*is on'; then
+  if [[ ",$mount_options," == *,quota,* ]] ||
+     quotaon -p "$mount_point" 2>/dev/null | grep -Eqi 'user quota.*(is on|enabled)'; then
     echo "用户 quota 已启用，跳过重复 quotacheck。"
   else
     "$SCRIPT_DIR/quota_manager.sh" enable
@@ -406,7 +408,10 @@ install_build_dependencies
 "$SCRIPT_DIR/apply_site_config.sh" --config "$SITE_CONFIG" --output-dir /etc/ssms
 
 echo "安装 Samba Storage Server。"
-CONFIG_FILE=/etc/ssms/system.conf "$SCRIPT_DIR/install_storage_server.sh"
+CONFIG_FILE=/etc/ssms/system.conf \
+BACKEND_CONFIG_FILE=/etc/ssms/backend.conf \
+BOOTSTRAP_MODE=1 \
+  "$SCRIPT_DIR/install_storage_server.sh"
 # shellcheck source=/dev/null
 source /etc/ssms/system.conf
 
