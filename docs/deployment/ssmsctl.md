@@ -107,8 +107,11 @@ ssmsctl system check
 在全新的 Ubuntu 虚拟机自动部署 Storage Server：
 
 ```bash
+sudo scripts/ssmsctl system bootstrap --host 192.168.1.230 --check-only
 sudo scripts/ssmsctl system bootstrap --host 192.168.1.230
 ```
+
+`--check-only` 只做环境和配置预检查，不安装依赖、不启动服务、不修改系统文件。
 
 完整说明见 `docs/deployment/bootstrap-storage-server.md`。
 

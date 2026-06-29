@@ -25,6 +25,13 @@ chmod +x scripts/*.sh scripts/ssmsctl
 使用新服务器的固定 IP 执行：
 
 ```bash
+sudo scripts/ssmsctl system bootstrap --host 192.168.1.230 --check-only
+```
+
+预检查只读取系统状态和配置，不安装依赖，也不会修改 `/etc/ssms`、
+`configs/site.env` 或 `/etc/fstab`。通过后执行正式部署：
+
+```bash
 sudo scripts/ssmsctl system bootstrap --host 192.168.1.230
 ```
 
@@ -55,6 +62,9 @@ sudo scripts/ssmsctl system bootstrap --config configs/site.env
 3. 只为对应条目追加 `usrquota,grpquota`。
 4. 重新挂载并验证参数。
 5. 执行 `quota_manager.sh enable`。
+
+如果 `/etc/fstab` 已更新但重新挂载失败，脚本会自动恢复刚才的备份，并提示
+检查挂载配置后重试，不会把失败的 fstab 配置留在系统中。
 
 备份文件格式：
 

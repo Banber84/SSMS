@@ -53,6 +53,9 @@ grep -qF 'systemctl restart storage-usage-sync.timer' "$PROJECT_ROOT/scripts/ins
 grep -qF 'systemctl restart storage-agent' "$PROJECT_ROOT/scripts/install_storage_agent.sh"
 grep -qF 'system:bootstrap' "$PROJECT_ROOT/scripts/ssmsctl"
 grep -qF 'configure_quota_mount' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
+grep -qF -- '--check-only' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
+grep -qF 'run_preflight_check' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
+grep -qF '已恢复 /etc/fstab' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
 grep -qF 'go env -w "GOPROXY=$GO_PROXY" "GOSUMDB=$GO_SUM_DB"' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
 grep -qF 'BACKEND_CONFIG_FILE=/etc/ssms/backend.conf' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
 grep -qF 'BOOTSTRAP_MODE=1' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
@@ -61,6 +64,7 @@ grep -qF '"$CONFIG_FILE" -ef /etc/ssms/system.conf' "$PROJECT_ROOT/scripts/insta
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_node_client.sh"
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_storage_server.sh"
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_management_server.sh"
+grep -qF 'for managed_path in server agent docs configs scripts README.md LICENSE' "$PROJECT_ROOT/scripts/install_management_server.sh"
 
 echo "检查文档分类。"
 if find "$PROJECT_ROOT/docs/deployment" -maxdepth 1 -type f -name '*test-report.md' -print -quit | grep -q .; then

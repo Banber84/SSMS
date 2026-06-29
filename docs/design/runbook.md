@@ -136,8 +136,27 @@ storage-server.env
 storage-agent.env
 ```
 
+## 全新 Storage Server 一键部署
+
+新 Ubuntu 虚拟机推荐先执行预检查：
+
+```bash
+sudo scripts/ssmsctl system bootstrap --host 192.168.1.230 --check-only
+```
+
+预检查通过后正式部署：
+
+```bash
+sudo scripts/ssmsctl system bootstrap --host 192.168.1.230
+```
+
+脚本会生成统一配置，安装 Samba、quota、管理后台、Storage Agent、用量同步定时器
+和 `ssmsctl`。完整流程见
+[`docs/deployment/bootstrap-storage-server.md`](../deployment/bootstrap-storage-server.md)。
+
 ## systemd 部署管理后台
 
+已有统一配置或需要调试单个组件时，可以单独安装管理后台。
 管理后台运行时需要读取 `server/templates/*.html`，建议把项目发布目录放到 `/opt/ssms`：
 
 ```bash
