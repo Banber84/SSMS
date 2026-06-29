@@ -18,7 +18,7 @@ usage() {
   gateway   deploy | install | uninstall | status
   usage     sync | report
   backend   health | upsert-user | update-quota | delete-user | delete-server
-  system    status | check
+  system    bootstrap | status | check
 
 常用示例：
   sudo ssmsctl node join NodeC 192.168.1.215 nodec1
@@ -31,6 +31,7 @@ usage() {
   sudo ssmsctl gateway deploy --node NodeC
   ssmsctl gateway status NodeC
   sudo ssmsctl usage sync
+  sudo ssmsctl system bootstrap --host 192.168.1.230
   ssmsctl system status
   ssmsctl system check
 
@@ -98,6 +99,7 @@ EOF
     system)
       cat <<'EOF'
 系统维护：
+  sudo ssmsctl system bootstrap --host HOST [bootstrap 选项]
   ssmsctl system status
   ssmsctl system check
 EOF
@@ -377,6 +379,9 @@ case "$RESOURCE:$ACTION" in
   system:status)
     [[ $# -eq 0 ]] || { echo "system status 不接受额外参数。" >&2; exit 1; }
     system_status
+    ;;
+  system:bootstrap)
+    run_privileged_script bootstrap_storage_server.sh "$@"
     ;;
   system:check)
     [[ $# -eq 0 ]] || { echo "system check 不接受额外参数。" >&2; exit 1; }

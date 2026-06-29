@@ -99,6 +99,15 @@ sudo ssmsctl usage sync
 
 完整说明见 [docs/deployment/ssmsctl.md](docs/deployment/ssmsctl.md)。
 
+全新 Ubuntu 虚拟机可以自动部署为 Storage Server：
+
+```bash
+sudo scripts/ssmsctl system bootstrap --host 192.168.1.230
+```
+
+部署说明见
+[docs/deployment/bootstrap-storage-server.md](docs/deployment/bootstrap-storage-server.md)。
+
 ## 常用文档
 
 - [运行手册](docs/design/runbook.md)：后端、Agent、systemd、接口测试和故障排查。

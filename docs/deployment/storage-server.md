@@ -1,5 +1,14 @@
 # Storage Server 部署文档
 
+全新 Ubuntu 虚拟机建议直接使用自动部署：
+
+```bash
+sudo scripts/ssmsctl system bootstrap --host 192.168.1.230
+```
+
+完整说明见 `docs/deployment/bootstrap-storage-server.md`。以下章节保留手工部署和
+故障排查步骤。
+
 ## 1. 环境要求
 
 本项目当前按 `ubuntu-26.04-live-server-amd64` 编写部署步骤。若 Ubuntu 安装在 Windows PC、双系统或虚拟机中，请先参考：

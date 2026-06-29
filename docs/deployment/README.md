@@ -6,10 +6,11 @@
 
 1. [../design/runbook.md](../design/runbook.md)：后端、Agent、systemd 和接口验证总入口。
 2. [ssmsctl.md](ssmsctl.md)：统一管理命令。
-3. [storage-server.md](storage-server.md)：Storage Server 部署。
-4. [node-client.md](node-client.md)：登录节点客户端部署。
-5. [smb-gateway.md](smb-gateway.md)：SMB Gateway 部署和验证。
-6. [testing.md](testing.md)：第一版 demo 测试流程。
+3. [bootstrap-storage-server.md](bootstrap-storage-server.md)：全新 Storage Server 自动部署。
+4. [storage-server.md](storage-server.md)：Storage Server 手工部署。
+5. [node-client.md](node-client.md)：登录节点客户端部署。
+6. [smb-gateway.md](smb-gateway.md)：SMB Gateway 部署和验证。
+7. [testing.md](testing.md)：第一版 demo 测试流程。
 
 ## 操作文档
 
@@ -17,6 +18,7 @@
 | --- | --- |
 | [commands.md](commands.md) | 常用命令速查 |
 | [ssmsctl.md](ssmsctl.md) | 统一命令入口 |
+| [bootstrap-storage-server.md](bootstrap-storage-server.md) | 全新 Storage Server 自动部署 |
 | [storage-server.md](storage-server.md) | 存储服务安装和配置 |
 | [node-client.md](node-client.md) | 登录节点安装和自动挂载 |
 | [smb-gateway.md](smb-gateway.md) | 节点 SMB Gateway |

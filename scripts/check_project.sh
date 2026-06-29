@@ -12,6 +12,7 @@ done < <(find "$PROJECT_ROOT/scripts" -type f \( -name '*.sh' -o -name 'ssmsctl'
 echo "检查关键命令帮助入口。"
 for script in \
   backend_sync.sh \
+  bootstrap_storage_server.sh \
   create_node_user.sh \
   deploy_smb_gateways.sh \
   install_node_agent.sh \
@@ -47,6 +48,9 @@ grep -qF 'SMB 网关卸载检查失败' "$PROJECT_ROOT/scripts/leave_node.sh"
 grep -qF 'OnUnitActiveSec=1min' "$PROJECT_ROOT/configs/storage-usage-sync.timer"
 grep -qF '<meta http-equiv="refresh" content="30">' "$PROJECT_ROOT/server/templates/storage.html"
 grep -qF 'systemctl restart storage-usage-sync.timer' "$PROJECT_ROOT/scripts/install_management_server.sh"
+grep -qF 'systemctl restart storage-agent' "$PROJECT_ROOT/scripts/install_storage_agent.sh"
+grep -qF 'system:bootstrap' "$PROJECT_ROOT/scripts/ssmsctl"
+grep -qF 'configure_quota_mount' "$PROJECT_ROOT/scripts/bootstrap_storage_server.sh"
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_node_client.sh"
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_storage_server.sh"
 grep -qF 'install -m 0755 "$PROJECT_ROOT/scripts/ssmsctl" /usr/local/bin/ssmsctl' "$PROJECT_ROOT/scripts/install_management_server.sh"
@@ -100,6 +104,10 @@ EOF
 grep -qF 'BACKEND_API_BASE=http://192.168.1.187:8080' "$tmp_dir/generated/backend.conf"
 grep -qF 'BACKEND_SYNC_ENABLED=1' "$tmp_dir/generated/backend.conf"
 grep -qF 'BACKEND_API_TIMEOUT=5' "$tmp_dir/generated/backend.conf"
+
+sed '/^NodeA 192\.168\.1\.188 /d' "$tmp_dir/site-valid.env" > "$tmp_dir/site-empty.env"
+"$PROJECT_ROOT/scripts/apply_site_config.sh" --config "$tmp_dir/site-empty.env" --output-dir "$tmp_dir/generated-empty" >/dev/null
+grep -qF '# 未配置 SSMS_NODES。' "$tmp_dir/generated-empty/nodes.conf"
 
 if command -v go >/dev/null 2>&1; then
   echo "运行 Go 测试。"

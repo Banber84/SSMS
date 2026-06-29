@@ -119,7 +119,6 @@ require_value STORAGE_SYNC_USER "$STORAGE_SYNC_USER" || validation_failed=1
 require_value STORAGE_SYNC_PROJECT_DIR "$STORAGE_SYNC_PROJECT_DIR" || validation_failed=1
 require_value SSMS_AGENT_NAME "$SSMS_AGENT_NAME" || validation_failed=1
 require_value SSMS_AGENT_ADDRESS "$SSMS_AGENT_ADDRESS" || validation_failed=1
-require_value SSMS_NODES "${SSMS_NODES:-}" || validation_failed=1
 
 if is_blank "$SSMS_MANAGEMENT_URL"; then
   SSMS_MANAGEMENT_URL="http://${SSMS_MANAGEMENT_HOST}:${SSMS_MANAGEMENT_PORT}"
@@ -128,8 +127,7 @@ if is_blank "$SSMS_SERVER_URL"; then
   SSMS_SERVER_URL="$SSMS_MANAGEMENT_URL"
 fi
 
-node_line_count=0
-if [[ -n "${SSMS_NODES:-}" ]]; then
+if ! is_blank "${SSMS_NODES:-}"; then
   while IFS= read -r line; do
     line="$(trim "$line")"
     [[ -z "$line" ]] && continue
@@ -139,13 +137,7 @@ if [[ -n "${SSMS_NODES:-}" ]]; then
       echo "正确格式：节点名 主机地址 SSH用户 项目目录" >&2
       validation_failed=1
     fi
-    node_line_count=$((node_line_count + 1))
   done <<< "$SSMS_NODES"
-fi
-
-if [[ "$node_line_count" -eq 0 ]]; then
-  echo "site.env 缺少有效节点清单：SSMS_NODES" >&2
-  validation_failed=1
 fi
 
 if [[ "$validation_failed" -ne 0 ]]; then
@@ -223,7 +215,7 @@ write_header "$NODES_CONF"
 {
   echo "# 格式：节点名 主机地址 SSH用户 项目目录"
   echo
-  if [[ -n "${SSMS_NODES:-}" ]]; then
+  if ! is_blank "${SSMS_NODES:-}"; then
     while IFS= read -r line; do
       [[ -z "${line//[[:space:]]/}" ]] && continue
       printf '%s\n' "$line"

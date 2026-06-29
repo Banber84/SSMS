@@ -96,7 +96,8 @@ install -m 0755 "$PROJECT_ROOT/bin/storage-agent" /usr/local/bin/storage-agent
 install -m 0644 "$PROJECT_ROOT/configs/storage-agent.service" /etc/systemd/system/storage-agent.service
 
 systemctl daemon-reload
-systemctl enable --now storage-agent
+systemctl enable storage-agent
+systemctl restart storage-agent
 
 cat <<EOF
 Storage Agent 安装完成。

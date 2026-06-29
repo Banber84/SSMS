@@ -102,6 +102,14 @@ ssmsctl system status
 ssmsctl system check
 ```
 
+在全新的 Ubuntu 虚拟机自动部署 Storage Server：
+
+```bash
+sudo scripts/ssmsctl system bootstrap --host 192.168.1.230
+```
+
+完整说明见 `docs/deployment/bootstrap-storage-server.md`。
+
 `backend` 分组只同步 Go 管理后台数据库，不创建或删除 Linux/Samba 系统用户。
 完整用户生命周期仍优先使用 `ssmsctl user create/delete`。
 
